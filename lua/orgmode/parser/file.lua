@@ -309,6 +309,12 @@ function File:get_closest_headline(id)
   if not node then
     return nil
   end
+
+  if node:type() == "document" then
+    local hs = self:get_headlines()
+    return hs[#hs]
+  end
+
   while node and node:type() ~= 'section' do
     node = node:parent()
   end
