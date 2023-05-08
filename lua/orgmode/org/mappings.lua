@@ -479,6 +479,7 @@ function OrgMappings:do_promote(whole_subtree)
   if foldclosed > -1 and vim.fn.foldclosed('.') == -1 then
     vim.cmd([[norm!zc]])
   end
+  vim.cmd(':normal zx')
   EventManager.dispatch(events.HeadlinePromoted:new(Files.get_closest_headline(), ts_org.closest_headline(), old_level))
 end
 
@@ -490,6 +491,7 @@ function OrgMappings:do_demote(whole_subtree)
   if foldclosed > -1 and vim.fn.foldclosed('.') == -1 then
     vim.cmd([[norm!zc]])
   end
+  vim.cmd(':normal zx')
   EventManager.dispatch(events.HeadlineDemoted:new(Files.get_closest_headline(), ts_org.closest_headline(), old_level))
 end
 
@@ -660,6 +662,8 @@ function OrgMappings:insert_heading_respect_content(suffix)
     local line = config:respect_blank_before_new_entry({ string.rep('*', item.level) .. ' ' .. suffix })
     vim.fn.append(item.range.end_line, line)
     vim.fn.cursor(item.range.end_line + #line, 0)
+    vim.cmd([[silent! norm!zx]])
+    vim.cmd([[silent! norm!A]])
   end
   return vim.cmd([[startinsert!]])
 end
@@ -716,6 +720,7 @@ function OrgMappings:move_subtree_up()
   vim.cmd(
     string.format(':%d,%dmove %d', item.range.start_line, item.range.end_line, prev_headline.range.start_line - 1)
   )
+  vim.cmd(':normal zx')
 end
 
 function OrgMappings:move_subtree_down()
@@ -725,6 +730,7 @@ function OrgMappings:move_subtree_down()
     return utils.echo_warning('Cannot move past superior level.')
   end
   vim.cmd(string.format(':%d,%dmove %d', item.range.start_line, item.range.end_line, next_headline.range.end_line))
+  vim.cmd(':normal zx')
 end
 
 function OrgMappings:show_help()
