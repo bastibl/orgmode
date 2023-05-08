@@ -8,7 +8,7 @@
 (headline (stars) @stars (#eq? @stars "******")) @OrgTSHeadlineLevel6
 (headline (stars) @stars (#eq? @stars "*******")) @OrgTSHeadlineLevel7
 (headline (stars) @stars (#eq? @stars "********")) @OrgTSHeadlineLevel8
-(headline (item) @spell)
+(headline (item))
 (list (listitem (paragraph) @spell))
 (body (paragraph) @spell)
 (bullet) @OrgTSBullet
