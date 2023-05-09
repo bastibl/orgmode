@@ -662,7 +662,7 @@ function OrgMappings:insert_heading_respect_content(suffix)
     local line = config:respect_blank_before_new_entry({ string.rep('*', item.level) .. ' ' .. suffix })
     vim.fn.append(item.range.end_line, line)
     vim.fn.cursor(item.range.end_line + #line, 0)
-    vim.cmd([[silent! norm!zx]])
+    -- vim.cmd([[silent! norm!zx]])
     vim.cmd([[silent! norm!A]])
   end
   return vim.cmd([[startinsert!]])
