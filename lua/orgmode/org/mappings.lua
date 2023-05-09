@@ -474,24 +474,24 @@ end
 function OrgMappings:do_promote(whole_subtree)
   local headline = ts_org.closest_headline()
   local old_level = headline:level()
-  local foldclosed = vim.fn.foldclosed('.')
+  -- local foldclosed = vim.fn.foldclosed('.')
   headline:promote(vim.v.count1, whole_subtree)
-  if foldclosed > -1 and vim.fn.foldclosed('.') == -1 then
-    vim.cmd([[norm!zc]])
-  end
-  vim.cmd(':normal zx')
+  -- if foldclosed > -1 and vim.fn.foldclosed('.') == -1 then
+  --   vim.cmd([[norm!zc]])
+  -- end
+  -- vim.cmd(':normal zx')
   EventManager.dispatch(events.HeadlinePromoted:new(Files.get_closest_headline(), ts_org.closest_headline(), old_level))
 end
 
 function OrgMappings:do_demote(whole_subtree)
   local headline = ts_org.closest_headline()
   local old_level = headline:level()
-  local foldclosed = vim.fn.foldclosed('.')
+  -- local foldclosed = vim.fn.foldclosed('.')
   headline:demote(vim.v.count1, whole_subtree)
-  if foldclosed > -1 and vim.fn.foldclosed('.') == -1 then
-    vim.cmd([[norm!zc]])
-  end
-  vim.cmd(':normal zx')
+  -- if foldclosed > -1 and vim.fn.foldclosed('.') == -1 then
+  --   vim.cmd([[norm!zc]])
+  -- end
+  -- vim.cmd(':normal zx')
   EventManager.dispatch(events.HeadlineDemoted:new(Files.get_closest_headline(), ts_org.closest_headline(), old_level))
 end
 
@@ -720,7 +720,11 @@ function OrgMappings:move_subtree_up()
   vim.cmd(
     string.format(':%d,%dmove %d', item.range.start_line, item.range.end_line, prev_headline.range.start_line - 1)
   )
-  vim.cmd(':normal zx')
+  item = Files.get_closest_headline()
+  if item then
+    vim.fn.cursor(item.range.start_line, 0)
+  end
+  -- vim.cmd(':normal zx')
 end
 
 function OrgMappings:move_subtree_down()
@@ -730,7 +734,11 @@ function OrgMappings:move_subtree_down()
     return utils.echo_warning('Cannot move past superior level.')
   end
   vim.cmd(string.format(':%d,%dmove %d', item.range.start_line, item.range.end_line, next_headline.range.end_line))
-  vim.cmd(':normal zx')
+  item = Files.get_closest_headline()
+  if item then
+    vim.fn.cursor(item.range.start_line, 0)
+  end
+  -- vim.cmd(':normal zx')
 end
 
 function OrgMappings:show_help()
