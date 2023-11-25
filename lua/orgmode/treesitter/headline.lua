@@ -533,6 +533,7 @@ end
 ---@param active? boolean
 ---@private
 function Headline:_add_date(type, date, active)
+  self:refresh()
   local dates = self:dates()
   local text = type .. ': ' .. date:to_wrapped_string(active)
   if vim.tbl_isempty(dates) then
