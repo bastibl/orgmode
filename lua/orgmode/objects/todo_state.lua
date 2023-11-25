@@ -45,6 +45,15 @@ function TodoState:open_fast_access()
     })
   end
 
+  table.insert(enumerated, {
+    choice_value = " ",
+    choice_text = " ",
+    choice_hl = 'Title',
+    desc_text = '<clear>',
+    desc_hl = "Folded",
+    ctx = {shortcut = " ", type="", value=""},
+  })
+
   local choice = utils.choose(enumerated)
   if not choice then
     return
