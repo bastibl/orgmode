@@ -208,6 +208,9 @@ function Headline:set_todo(keyword)
     return
   end
 
+  if keyword == "" then
+    return
+  end
   local stars = self:stars()
   local text = ts.get_node_text(stars, 0)
   tree_utils.set_node_text(stars, string.format('%s %s', text, keyword))
