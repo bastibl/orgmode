@@ -374,6 +374,11 @@ function Config:setup_ts_predicates()
         return
       end
 
+      local end_line = vim.api.nvim_buf_get_lines(bufnr, end_row - 1, end_row, true)[1]
+      if end_line ~= '' then
+        return
+      end
+
       while true do
         if start_row >= end_row - 2 then
           break
