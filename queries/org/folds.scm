@@ -5,4 +5,4 @@
   (property_drawer)
   (block)
   ] @fold
-  (#trim! @fold))
+  (#mytrim! @fold))

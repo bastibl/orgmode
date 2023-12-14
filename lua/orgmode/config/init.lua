@@ -53,7 +53,7 @@ function Config:_are_priorities_valid(opts)
     if not (high and low and default) then
       utils.echo_warning(
         'org_priority_highest, org_priority_lowest and org_priority_default can only be set together.'
-          .. 'Falling back to default priorities'
+        .. 'Falling back to default priorities'
       )
       return false
     end
@@ -63,7 +63,7 @@ function Config:_are_priorities_valid(opts)
       if high < 0 or low < 0 or default < 0 then
         utils.echo_warning(
           'org_priority_highest, org_priority_lowest and org_priority_default cannot be negative.'
-            .. 'Falling back to default priorities'
+          .. 'Falling back to default priorities'
         )
         return false
       end
@@ -76,20 +76,20 @@ function Config:_are_priorities_valid(opts)
       if default < high or default > low then
         utils.echo_warning(
           'org_priority_default must be bigger than org_priority_highest and smaller than org_priority_lowest.'
-            .. 'Falling back to default priorities'
+          .. 'Falling back to default priorities'
         )
         return false
       end
-    -- one-char strings
+      -- one-char strings
     elseif
-      (type(high) == 'string' and #high == 1)
-      and (type(low) == 'string' and #low == 1)
-      and (type(default) == 'string' and #default == 1)
+        (type(high) == 'string' and #high == 1)
+        and (type(low) == 'string' and #low == 1)
+        and (type(default) == 'string' and #default == 1)
     then
       if not high:match('%a') or not low:match('%a') or not default:match('%a') then
         utils.echo_warning(
           'org_priority_highest, org_priority_lowest and org_priority_default must be letters.'
-            .. 'Falling back to default priorities'
+          .. 'Falling back to default priorities'
         )
         return false
       end
@@ -106,15 +106,15 @@ function Config:_are_priorities_valid(opts)
       if default < high or default > low then
         utils.echo_warning(
           'org_priority_default must be bigger than org_priority_highest and smaller than org_priority_lowest.'
-            .. 'Falling back to default priorities'
+          .. 'Falling back to default priorities'
         )
         return false
       end
     else
       utils.echo_warning(
         'org_priority_highest, org_priority_lowest and org_priority_default must be either of type'
-          .. "'number' or of type 'string' of length one. All three options need to agree on this type."
-          .. 'Falling back to default priorities'
+        .. "'number' or of type 'string' of length one. All three options need to agree on this type."
+        .. 'Falling back to default priorities'
       )
       return false
     end
@@ -126,9 +126,9 @@ end
 function Config:_deprecation_notify(opts)
   local messages = {}
   if
-    opts.mappings
-    and opts.mappings.org
-    and (opts.mappings.org.org_increase_date or opts.mappings.org.org_decrease_date)
+      opts.mappings
+      and opts.mappings.org
+      and (opts.mappings.org.org_increase_date or opts.mappings.org.org_decrease_date)
   then
     table.insert(
       messages,
@@ -357,6 +357,48 @@ function Config:get_inheritable_tags(headline)
 end
 
 function Config:setup_ts_predicates()
+  -- Trim blank lines from end of the region
+  -- Arguments are the captures to trim.
+  ---@param match (TSNode|nil)[]
+  ---@param _ string
+  ---@param bufnr integer
+  ---@param pred string[]
+  ---@param metadata table
+  vim.treesitter.query.add_directive("mytrim!", function(match, _, bufnr, pred, metadata)
+    for _, id in ipairs { select(2, unpack(pred)) } do
+      local node = match[id]
+      local start_row, start_col, end_row, end_col = node:range()
+
+      -- Don't trim if region ends in middle of a line
+      if end_col ~= 0 then
+        return
+      end
+
+      while true do
+        if start_row >= end_row - 2 then
+          break
+        end
+        -- As we only care when end_col == 0, always inspect one line above end_row.
+        -- local end_line = vim.api.nvim_buf_get_lines(bufnr, end_row - 1, end_row, true)[1]
+        local end_line = vim.api.nvim_buf_get_lines(bufnr, end_row - 2, end_row - 1, true)[1]
+
+        if end_line ~= "" then
+          break
+        end
+
+        end_row = end_row - 1
+      end
+
+      -- If this produces an invalid range, we just skip it.
+      if start_row < end_row or (start_row == end_row and start_col <= end_col) then
+        if not metadata[id] then
+          metadata[id] = {}
+        end
+        metadata[id].range = { start_row, start_col, end_row, end_col }
+      end
+    end
+  end, true)
+
   local todo_keywords = self:get_todo_keywords().KEYS
 
   vim.treesitter.query.add_predicate('org-is-todo-keyword?', function(match, _, source, predicate)
