@@ -208,7 +208,7 @@ function Headline:set_todo(keyword)
     return
   end
 
-  if keyword == "" then
+  if keyword == '' then
     return
   end
   local stars = self:stars()

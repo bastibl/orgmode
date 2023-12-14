@@ -783,7 +783,12 @@ function OrgMappings:move_subtree_down()
     return utils.echo_warning('Cannot move past superior level.')
   end
   local row = vim.api.nvim_win_get_cursor(0)[1]
-  local offset = item.range.start_line + next_headline.range.end_line - next_headline.range.start_line + row - item.range.start_line + 1
+  local offset = item.range.start_line
+    + next_headline.range.end_line
+    - next_headline.range.start_line
+    + row
+    - item.range.start_line
+    + 1
   vim.cmd(string.format(':%d,%dmove %d', item.range.start_line, item.range.end_line, next_headline.range.end_line))
   vim.cmd(string.format(':%d', offset))
   -- vim.cmd(':normal zx')
