@@ -16,21 +16,27 @@ function M.substitute_path(path_str)
   elseif path_str:match('^%.%./') then
     local base = vim.fn.fnamemodify(utils.current_file_path(), ':p:h')
     return base .. '/' .. path_str
+  else
+    local base = vim.fn.fnamemodify(utils.current_file_path(), ':p:h')
+    return base .. '/' .. path_str
   end
-  return false
 end
 
 ---@param filepath string
 function M.get_real_path(filepath)
-  if not filepath then
-    return false
+  -- if not filepath then
+  --   return false
+  -- end
+  -- local substituted = M.substitute_path(filepath)
+  -- if not substituted then
+  --   return false
+  -- end
+  local file_dir = vim.fn.fnamemodify(filepath, ':p:h')
+  local real = vim.loop.fs_realpath(file_dir)
+  if real then
+    return real .. "/" .. vim.fn.fnamemodify(filepath, ':t')
   end
-  local substituted = M.substitute_path(filepath)
-  if not substituted then
-    return false
-  end
-  local real = vim.loop.fs_realpath(substituted)
-  return real or false
+  return false
 end
 
 function M.get_current_file_dir()
