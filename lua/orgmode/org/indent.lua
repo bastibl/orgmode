@@ -7,7 +7,7 @@ local function get_indent_pad(linenr)
   local indent_mode = config.org_indent_mode == 'indent'
   if indent_mode then
     local headline = headline_lib.from_cursor({ linenr, 0 })
-    if not headline then
+    if not headline or vim.fn.exists('b:org_no_indent') ~= 0 then
       return 0
     end
     return headline:level() + 1
