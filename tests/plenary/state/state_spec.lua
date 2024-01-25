@@ -2,6 +2,7 @@ local utils = require('orgmode.utils')
 ---@type OrgState
 local state = nil
 local cache_path = vim.fs.normalize(vim.fn.stdpath('cache') .. '/org-cache.json', { expand_env = false })
+local spy = require('luassert.spy')
 
 describe('State', function()
   before_each(function()
@@ -76,13 +77,41 @@ describe('State', function()
     assert.are.equal('hello world', state.my_var)
   end)
 
+  it('should set the dirty state when a variable is set', function()
+    -- By default it's dirty
+    assert.is.True(state._ctx.dirty)
+    state:save_sync()
+    assert.is.False(state._ctx.dirty)
+
+    state.my_var = 'hello world'
+    assert.is.True(state._ctx.dirty)
+    state:save_sync()
+    assert.is.False(state._ctx.dirty)
+
+    -- Ensure writefile is not called if state is not dirty
+    local s = spy.on(utils, 'writefile')
+    state:save_sync()
+    assert.spy(s).was.called(0)
+
+    -- Ensure writefile is not called if state was not changed
+    state:save_sync()
+    state.my_var = 'hello world'
+    assert.spy(s).was.called(0)
+
+    -- Ensure writefile is called if state prop was changed
+    state.my_var = 'hello worlds'
+    state:save_sync()
+    assert.spy(s).was.called(1)
+
+    s:revert()
+  end)
+
   it('should be able to self-heal from an invalid state file', function()
     state:save_sync()
 
-    -- Mangle the cache
-    vim.cmd.edit(cache_path)
+    vim.cmd(('edit %s'):format(cache_path))
     vim.api.nvim_buf_set_lines(0, 0, -1, false, { '[ invalid json!' })
-    vim.cmd.write()
+    vim.cmd('write')
 
     -- Ensure we reload the state from its cache file (this should also "heal" the cache)
     state._ctx.loaded = false
