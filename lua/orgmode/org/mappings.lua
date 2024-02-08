@@ -666,9 +666,10 @@ function OrgMappings:insert_heading_respect_content(suffix)
   if not item then
     self:_insert_heading_from_plain_line(suffix)
   else
-    local line = config:respect_blank_before_new_entry({ string.rep('*', item.level) .. ' ' .. suffix })
-    vim.fn.append(item.range.end_line, line)
-    vim.fn.cursor(item.range.end_line + #line, 0)
+    local line = config:respect_blank_before_new_entry({ string.rep('*', item:get_level()) .. ' ' .. suffix })
+    local end_line = item:get_range().end_line
+    vim.fn.append(end_line, line)
+    vim.fn.cursor(end_line + #line, 1)
   end
   return vim.cmd([[startinsert!]])
 end
