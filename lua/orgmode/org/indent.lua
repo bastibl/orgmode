@@ -1,16 +1,17 @@
 local config = require('orgmode.config')
 local VirtualIndent = require('orgmode.ui.virtual_indent')
-local ts_utils = require('nvim-treesitter.ts_utils')
+local ts_utils = require('orgmode.utils.treesitter')
+---@type Query
 local query = nil
 
 local function get_indent_pad(linenr)
-  local indent_mode = config.org_indent_mode == 'indent'
-  if indent_mode then
-    local headline = headline_lib.from_cursor({ linenr, 0 })
-    if not headline or vim.fn.exists('b:org_no_indent') ~= 0 then
+  if config.org_adapt_indentation then
+    local headline = ts_utils.closest_headline_node({ linenr, 0 })
+    if not headline then
       return 0
     end
-    return headline:level() + 1
+    local _, level = headline:field('stars')[1]:end_()
+    return level + 1
   end
   return 0
 end
@@ -106,7 +107,8 @@ local get_matches = ts_utils.memoize_by_buf_tick(function(bufnr)
       }
 
       if type == 'headline' then
-        opts.stars = vim.treesitter.get_node_text(node:field('stars')[1], bufnr):len()
+        local _, level = node:field('stars')[1]:end_()
+        opts.stars = level
         opts.indent = opts.indent + opts.stars + 1
         matches[range.start.line + 1] = opts
       end
@@ -293,7 +295,7 @@ local function foldtext()
   local line = vim.fn.getline(vim.v.foldstart)
 
   if config.org_hide_leading_stars then
-    line = vim.fn.substitute(line, '\\(^\\*\\+\\)', '\\=repeat(" ", len(submatch(0))-1) . "*"', '')
+    line = vim.fn.substitute(line, '\\(^\\*\\+\\)', '\\=repeat(" ", len(submatch(0))-1) . "*"', '') or ''
   end
 
   if vim.opt.conceallevel:get() > 0 and string.find(line, '[[', 1, true) then

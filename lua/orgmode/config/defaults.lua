@@ -1,5 +1,6 @@
----@class DefaultConfig
+---@class OrgDefaultConfig
 ---@field org_id_method 'uuid' | 'ts' | 'org'
+---@field org_agenda_span 'day' | 'week' | 'month' | 'year' | number
 local DefaultConfig = {
   org_agenda_files = '',
   org_default_notes_file = '',
@@ -63,6 +64,7 @@ local DefaultConfig = {
   },
   mappings = {
     disable_all = false,
+    org_return_uses_meta_return = false,
     prefix = '<Leader>o',
     global = {
       org_agenda = '<prefix>a',
