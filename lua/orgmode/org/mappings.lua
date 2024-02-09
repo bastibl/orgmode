@@ -17,6 +17,7 @@ local EventManager = require('orgmode.events')
 local Promise = require('orgmode.utils.promise')
 local events = EventManager.event
 local Link = require('orgmode.objects.link')
+local job = require('plenary.job')
 
 ---@class OrgMappings
 ---@field capture Capture
@@ -865,6 +866,14 @@ function OrgMappings:open_at_point()
       return utils.echo_warning('Netrw plugin must be loaded in order to open urls.')
     end
     return vim.fn['netrw#BrowseX'](url, vim.fn['netrw#CheckIfRemote']())
+  elseif link.url:is_citation() then
+    local key = link.url:get_citation()
+    local file = string.format("/home/basti/sync/papers/%s.pdf", key)
+    return job:new({
+      command = "zathura",
+      args = { file },
+      detached = true,
+    }):start()
   elseif not link.url:is_org_link() then
     utils.echo_warning(string.format('Unsupported link format: %q', url))
     return
