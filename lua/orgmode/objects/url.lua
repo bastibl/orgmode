@@ -68,6 +68,11 @@ function Url:is_http_url()
 end
 
 ---@return boolean
+function Url:is_citation()
+  return self:get_citation() and true
+end
+
+---@return boolean
 function Url:is_internal_headline()
   return self.str:find('^*') and true or false
 end
@@ -188,6 +193,11 @@ end
 ---@return string | false
 function Url:get_http_url()
   return self.str:match('^https?://.+$')
+end
+
+---@return string | false
+function Url:get_citation()
+  return self.str:match('^cite:@?(.+)$')
 end
 
 ---@return string | false
