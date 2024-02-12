@@ -31,7 +31,3 @@
 (plan) @OrgTSPlan
 (comment) @OrgTSComment @spell
 (directive) @OrgTSDirective
-
-(item . (expr) @OrgKeywordFaceWAITING @nospell (#eq? @OrgKeywordFaceWAITING WAITING))
-(item . (expr) @OrgKeywordFaceDELEGATED @nospell (#eq? @OrgKeywordFaceDELEGATED DELEGATED))
-(item . (expr) @OrgKeywordFaceCANCELED @nospell (#eq? @OrgKeywordFaceCANCELED CANCELED))
