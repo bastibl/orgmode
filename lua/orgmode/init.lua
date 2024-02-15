@@ -41,7 +41,7 @@ function Org:init()
   if self.initialized then
     return
   end
-  require('orgmode.colors.custom_highlighter').setup()
+  require('orgmode.colors.highlighter'):new()
   require('orgmode.events').init()
   self.files = require('orgmode.files'):new({
     paths = require('orgmode.config').org_agenda_files,
@@ -61,7 +61,9 @@ function Org:init()
     files = self.files,
   })
   require('orgmode.org.autocompletion').register()
-  self.statusline_debounced = require('orgmode.utils').debounce('statusline', self.clock.get_statusline, 300)
+  self.statusline_debounced = require('orgmode.utils').debounce('statusline', function()
+    return self.clock:get_statusline()
+  end, 300)
   self.initialized = true
 end
 
@@ -139,7 +141,7 @@ function Org.setup(opts)
   config:setup_ts_predicates()
   vim.defer_fn(function()
     if config.notifications.enabled and #vim.api.nvim_list_uis() > 0 then
-      Org.files:load():next(vim.schedule_wrap(function()
+      Org.instance().files:load():next(vim.schedule_wrap(function()
         instance.notifications = require('orgmode.notifications')
           :new({
             files = Org.files,
@@ -206,7 +208,7 @@ function Org.cron(opts)
   if not config.notifications.cron_enabled then
     return vim.cmd([[qa!]])
   end
-  Org.files:load():next(vim.schedule_wrap(function()
+  Org.instance().files:load():next(vim.schedule_wrap(function()
     ---@diagnostic disable-next-line: inject-field
     instance.notifications = require('orgmode.notifications')
       :new({

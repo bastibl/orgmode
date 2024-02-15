@@ -294,7 +294,7 @@ end
 local function foldtext()
   local line = vim.fn.getline(vim.v.foldstart)
 
-  if config.org_hide_leading_stars then
+  if config:hide_leading_stars(vim.api.nvim_get_current_buf()) then
     line = vim.fn.substitute(line, '\\(^\\*\\+\\)', '\\=repeat(" ", len(submatch(0))-1) . "*"', '') or ''
   end
 
@@ -314,8 +314,12 @@ end
 local function setup()
   local v = vim.version()
 
-  if config.org_startup_indented and not vim.version.lt({ v.major, v.minor, v.patch }, { 0, 10, 0 }) then
-    VirtualIndent:new():attach()
+  if not vim.version.lt({ v.major, v.minor, v.patch }, { 0, 10, 0 }) then
+    if config.org_startup_indented then
+      VirtualIndent:new():attach()
+    else
+      VirtualIndent:new():start_watch_org_indent()
+    end
   end
 end
 

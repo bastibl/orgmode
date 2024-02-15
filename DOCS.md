@@ -274,6 +274,10 @@ Possible values:
 * `true` - Uses *Virtual* indents to align content visually. The indents are only visual, they are not saved to the file.
 * `false` - Do not add any *Virtual* indentation.
 
+You can toggle Virtual indents on the fly by setting `vim.b.org_indent_mode` to either `true` or `false` when in a org
+buffer. For example, if virtual indents were enabled in the current buffer then you could disable them immediately by
+setting `vim.b.org_indent_mode = false`.
+
 This feature has no effect when enabled on Neovim versions < 0.10.0
 
 #### **org_adapt_indentation**
@@ -291,6 +295,14 @@ Possible values:
 Possible values:
 * `true` - Disable [`org_adapt_indentation`](#org_adapt_indentation) by default when [`org_startup_indented`](#org_startup_indented) is enabled.
 * `false` - Do not disable [`org_adapt_indentation`](#org_adapt_indentation) by default when [`org_startup_indented`](#org_startup_indented) is enabled.
+
+#### **org_indent_mode_turns_on_hiding_stars**
+
+*type*: `boolean`<br />
+*default value*: `true`<br />
+Possible values:
+* `true` - Enable [`org_hide_leading_stars`](#org_hide_leading_stars) by default when [`org_indent_mode`](#org_startup_indented) is enabled for buffer (`vim.b.org_indent_mode = true`).
+* `false` - Do not modify the value in [`org_hide_leading_stars`](#org_hide_leading_stars) by default when [`.org_indent_mode`](#org_startup_indented) is enabled for buffer (`vim.b.org_indent_mode = true`).
 
 #### **org_src_window_setup**
 *type*: `string|function`<br />
