@@ -16,6 +16,7 @@ local Promise = require('orgmode.utils.promise')
 local events = EventManager.event
 local Link = require('orgmode.org.hyperlinks.link')
 local Babel = require('orgmode.babel')
+local Job = require('plenary.job')
 
 ---@class OrgMappings
 ---@field capture OrgCapture
@@ -877,7 +878,7 @@ function OrgMappings:open_at_point()
   elseif link.url:is_citation() then
     local key = link.url:get_citation()
     local file = string.format("/home/basti/sync/papers/%s.pdf", key)
-    return job:new({
+    return Job:new({
       command = "zathura",
       args = { file },
       detached = true,

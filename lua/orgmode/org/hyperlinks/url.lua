@@ -102,6 +102,16 @@ function Url:is_internal_headline()
 end
 
 ---@return boolean
+function Url:is_citation()
+  return self:get_citation() and true
+end
+
+---@return string | false
+function Url:get_citation()
+  return self.url:match('^cite:@?(.+)$')
+end
+
+---@return boolean
 function Url:is_file_custom_id()
   return self:is_file() and self.target and self.target.type == 'custom-id' or false
 end
