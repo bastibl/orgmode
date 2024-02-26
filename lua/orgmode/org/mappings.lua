@@ -794,12 +794,12 @@ function OrgMappings:move_subtree_up()
     return utils.echo_warning('Cannot move past superior level.')
   end
   local row = vim.api.nvim_win_get_cursor(0)[1]
-  local offset = row - item.range.start_line + prev_headline.range.start_line
+  local offset = row - item:get_range().start_line + prev_headline:get_range().start_line
   vim.cmd(
-    string.format(':%d,%dmove %d', item.range.start_line, item.range.end_line, prev_headline.range.start_line - 1)
+    string.format(':%d,%dmove %d', item:get_range().start_line, item:get_range().end_line, prev_headline:get_range().start_line - 1)
   )
   vim.cmd(string.format(':%d', offset))
-  -- vim.cmd(':normal zx')
+  vim.cmd(':normal zx')
 end
 
 function OrgMappings:move_subtree_down()
@@ -809,15 +809,17 @@ function OrgMappings:move_subtree_down()
     return utils.echo_warning('Cannot move past superior level.')
   end
   local row = vim.api.nvim_win_get_cursor(0)[1]
-  local offset = item.range.start_line
-    + next_headline.range.end_line
-    - next_headline.range.start_line
+  local item_range = item:get_range()
+  local next_range = next_headline:get_range()
+  local offset = item_range.start_line
+    + next_range.end_line
+    - next_range.start_line
     + row
-    - item.range.start_line
+    - item_range.start_line
     + 1
-  vim.cmd(string.format(':%d,%dmove %d', item.range.start_line, item.range.end_line, next_headline.range.end_line))
+  vim.cmd(string.format(':%d,%dmove %d', item_range.start_line, item_range.end_line, next_range.end_line))
   vim.cmd(string.format(':%d', offset))
-  -- vim.cmd(':normal zx')
+  vim.cmd(':normal zx')
 end
 
 function OrgMappings:show_help()

@@ -82,7 +82,8 @@ function Headline:promote(amount, recursive, dryRun)
     return {}
   end
 
-  return self:_handle_promote_demote(recursive, function(start_line, lines)
+  local pos = vim.api.nvim_win_get_cursor(0)
+  self:_handle_promote_demote(recursive, function(start_line, lines)
     for i, line in ipairs(lines) do
       if line:sub(1, 1) == '*' then
         lines[i] = line:sub(1 + amount)
@@ -98,6 +99,8 @@ function Headline:promote(amount, recursive, dryRun)
     end
     return lines
   end, dryRun)
+
+  vim.api.nvim_win_set_cursor(0, { pos[1] , math.max(0, pos[2] - amount)})
 end
 
 ---@param amount number
@@ -108,7 +111,7 @@ function Headline:demote(amount, recursive, dryRun)
   amount = amount or 1
   recursive = recursive or false
 
-  return self:_handle_promote_demote(recursive, function(start_line, lines)
+  self:_handle_promote_demote(recursive, function(start_line, lines)
     for i, line in ipairs(lines) do
       if line:sub(1, 1) == '*' then
         lines[i] = string.rep('*', amount) .. line
@@ -124,6 +127,9 @@ function Headline:demote(amount, recursive, dryRun)
     end
     return lines
   end, dryRun)
+
+  local pos = vim.api.nvim_win_get_cursor(0)
+  vim.api.nvim_win_set_cursor(0, { pos[1] , pos[2] + amount})
 end
 
 ---@return boolean
