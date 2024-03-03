@@ -847,6 +847,7 @@ end
 
 function Headline:is_same(other_headline)
   return self.file.filename == other_headline.filename
+    and self:get_range():is_same(other_headline:get_range())
     and self:get_headline_line_content() == other_headline:get_headline_line_content()
 end
 
