@@ -94,14 +94,14 @@ function M.link_highlights()
       ['@org.code.delimiter'] = 'String',
       ['@org.verbatim'] = 'String',
       ['@org.verbatim.delimiter'] = 'String',
-      ['@org.bold'] = { bold = true, default = true },
-      ['@org.bold.delimiter'] = { bold = true, default = true },
-      ['@org.italic'] = { italic = true, default = true },
-      ['@org.italic.delimiter'] = { italic = true, default = true },
-      ['@org.strikethrough'] = { strikethrough = true, default = true },
-      ['@org.strikethrough.delimiter'] = { strikethrough = true, default = true },
-      ['@org.underline'] = { underline = true, default = true },
-      ['@org.underline.delimiter'] = { underline = true, default = true },
+      ['@org.bold'] = { bold = true },
+      ['@org.bold.delimiter'] = { bold = true },
+      ['@org.italic'] = { italic = true },
+      ['@org.italic.delimiter'] = { italic = true },
+      ['@org.strikethrough'] = { strikethrough = true },
+      ['@org.strikethrough.delimiter'] = { strikethrough = true },
+      ['@org.underline'] = { underline = true },
+      ['@org.underline.delimiter'] = { underline = true },
       ['@org.table.delimiter'] = '@punctuation',
       ['@org.table.heading'] = '@function',
     })
@@ -109,9 +109,10 @@ function M.link_highlights()
 
   for src, def in pairs(links) do
     if type(def) == 'table' then
+      def.default = true
       vim.api.nvim_set_hl(0, src, def)
     else
-      vim.api.nvim_set_hl(0, src, { link = def })
+      vim.api.nvim_set_hl(0, src, { link = def, default = true })
     end
   end
 end
@@ -154,22 +155,40 @@ function M.define_todo_keyword_faces()
   local opts = {
     underline = {
       type = vim.o.termguicolors and 'gui' or 'cterm',
-      valid = 'on',
+      is_valid = function(value)
+        return value == 'on'
+      end,
       result = 'underline',
     },
     weight = {
       type = vim.o.termguicolors and 'gui' or 'cterm',
-      valid = 'bold',
+      is_valid = function(value)
+        return value == 'bold'
+      end,
     },
     foreground = {
       type = vim.o.termguicolors and 'guifg' or 'ctermfg',
+      is_valid = function(value)
+        if vim.o.termguicolors then
+          return true
+        end
+        return value:sub(1, 1) ~= '#'
+      end,
     },
     background = {
       type = vim.o.termguicolors and 'guibg' or 'ctermbg',
+      is_valid = function(value)
+        if vim.o.termguicolors then
+          return true
+        end
+        return value:sub(1, 1) ~= '#'
+      end,
     },
     slant = {
       type = vim.o.termguicolors and 'gui' or 'cterm',
-      valid = 'italic',
+      is_valid = function(value)
+        return value == 'italic'
+      end,
     },
   }
 
@@ -185,7 +204,7 @@ function M.define_todo_keyword_faces()
         local opt_value = vim.trim(faces[2])
         opt_value = opt_value:gsub('^"*', ''):gsub('"*$', '')
         local opt = opts[opt_name]
-        if opt and (not opt.valid or opt.valid == opt_value) then
+        if opt and opt.is_valid(opt_value) then
           if not hl_opts[opt.type] then
             hl_opts[opt.type] = {}
           end

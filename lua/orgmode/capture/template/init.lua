@@ -34,20 +34,6 @@ local expansions = {
   end,
 }
 
----@class OrgDatetreeTreeItem
----@field format string - The lua date format to use for the tree item
----@field pattern string - Pattern to match important date parts the date format
----@field order number[] - Order of checking the date parts matched from the pattern
-
----@class OrgCaptureTemplateDatetreeOpts
----@field date OrgDate
----@field time_prompt? boolean
----@field reversed? boolean
----@field tree? OrgDatetreeTreeItem[]
----@field tree_type? 'day' | 'week' | 'month' | 'custom'
-
----@alias OrgCaptureTemplateDatetree boolean | OrgCaptureTemplateDatetreeOpts
-
 ---@class OrgCaptureTemplate
 ---@field description? string
 ---@field template? string|string[]
@@ -227,7 +213,7 @@ function Template:_compile_expansions(content, found_expansions)
   found_expansions = found_expansions or expansions
   for expansion, compiler in pairs(found_expansions) do
     if content:match(vim.pesc(expansion)) then
-      content = content:gsub(vim.pesc(expansion), compiler())
+      content = content:gsub(vim.pesc(expansion), vim.pesc(compiler()))
     end
   end
   return content

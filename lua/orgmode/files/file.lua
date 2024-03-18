@@ -16,7 +16,7 @@ local Link = require('orgmode.org.hyperlinks.link')
 ---@field lines string[]
 ---@field content string
 ---@field metadata OrgFileMetadata
----@field parser LanguageTree
+---@field parser vim.treesitter.LanguageTree
 ---@field root TSNode
 local OrgFile = {}
 
@@ -85,7 +85,7 @@ function OrgFile:reload()
   local bufnr = self:bufnr()
 
   if bufnr > -1 then
-    local updated_file = self:_update_lines(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false))
+    local updated_file = self:_update_lines(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), bufnr)
     return Promise.resolve(updated_file)
   end
 
@@ -109,17 +109,13 @@ function OrgFile:is_modified()
   local bufnr = self:bufnr()
   if bufnr > -1 then
     local cur_changedtick = vim.api.nvim_buf_get_changedtick(bufnr)
-    local is_changed = cur_changedtick ~= self.metadata.changedtick
-    self.metadata.changedtick = cur_changedtick
-    return is_changed
+    return cur_changedtick ~= self.metadata.changedtick
   end
   local stat = vim.loop.fs_stat(self.filename)
   if not stat then
     return false
   end
-  local is_changed = stat.mtime.nsec ~= self.metadata.mtime
-  self.metadata.mtime = stat.mtime.nsec
-  return is_changed
+  return stat.mtime.nsec ~= self.metadata.mtime
 end
 
 ---Parse the file and update the root node
@@ -276,6 +272,7 @@ function OrgFile:find_headlines_matching_search_term(search_term, no_escape, ign
   end, self:get_headlines_including_archived())
 end
 
+---Find headlines where property value is matching the term partially from start
 ---@param property_name string
 ---@param term string
 ---@return OrgHeadline[]
@@ -283,6 +280,17 @@ function OrgFile:find_headlines_with_property_matching(property_name, term)
   return vim.tbl_filter(function(item)
     local property = item:get_property(property_name)
     return property and property:lower():match('^' .. vim.pesc(term:lower()))
+  end, self:get_headlines())
+end
+
+---Find headlines where property value is matching the term exactly
+---@param property_name string
+---@param term string
+---@return OrgHeadline[]
+function OrgFile:find_headlines_with_property(property_name, term)
+  return vim.tbl_filter(function(item)
+    local property = item:get_property(property_name)
+    return property and property:lower() == term:lower()
   end, self:get_headlines())
 end
 
@@ -610,8 +618,13 @@ function OrgFile:get_links()
   ]])
 
   local links = {}
+  local processed_lines = {}
   for _, match in ts_query:iter_captures(self.root, self:_get_source()) do
-    vim.list_extend(links, Link.all_from_line(self:get_node_text(match)))
+    local line = match:start()
+    if not processed_lines[line] then
+      vim.list_extend(links, Link.all_from_line(self.lines[line + 1], line + 1))
+      processed_lines[line] = true
+    end
   end
   return links
 end
@@ -646,10 +659,16 @@ end
 
 ---@private
 ---@param lines string[]
-function OrgFile:_update_lines(lines)
+---@param bufnr? number
+function OrgFile:_update_lines(lines, bufnr)
   self.lines = lines
   self.content = table.concat(lines, '\n')
   self:parse()
+  if bufnr then
+    self.metadata.changedtick = vim.api.nvim_buf_get_changedtick(bufnr)
+  else
+    self.metadata.mtime = vim.loop.fs_stat(self.filename).mtime.nsec
+  end
   return self
 end
 
