@@ -42,11 +42,11 @@ function OrgFiles:load(force)
   local actions = vim.tbl_map(function(filename)
     return self:load_file(filename):next(function(orgfile)
       if orgfile then
-        self.files[filename] = orgfile
+        self.files[orgfile.filename] = orgfile
       end
       return orgfile
     end)
-  end, self:_files())
+  end, self:_files(true))
 
   return Promise.all(actions):next(function()
     self.load_state = 'loaded'
@@ -57,7 +57,7 @@ end
 ---@param filename string
 ---@return OrgPromise<OrgFile>
 function OrgFiles:add_to_paths(filename)
-  filename = vim.fs.normalize(filename)
+  filename = vim.fn.resolve(vim.fn.fnamemodify(filename, ':p'))
 
   if self.files[filename] then
     return self.files[filename]:reload()
@@ -156,6 +156,7 @@ end
 
 ---@return OrgPromise<OrgFile>
 function OrgFiles:load_file(filename)
+  filename = vim.fn.resolve(vim.fn.fnamemodify(filename, ':p'))
   local file = self.all_files[filename]
   if file then
     return file:reload()
@@ -181,9 +182,7 @@ function OrgFiles:get(filename)
 end
 
 function OrgFiles:reload(filename)
-  self:load_file(filename):next(function(orgfile)
-    return orgfile
-  end)
+  return self:load_file(filename)
 end
 
 ---@param cursor? table (1, 0) indexed base position tuple
@@ -307,7 +306,9 @@ function OrgFiles:update_file(filename, action)
 
   return Promise.resolve(action(file)):next(function(result)
     edit_file.close()
-    return result
+    return file:reload():next(function()
+      return result
+    end)
   end)
 end
 
@@ -336,9 +337,13 @@ function OrgFiles:_setup_paths(paths)
 end
 
 ---@private
-function OrgFiles:_files()
+---@param skip_resolve? boolean
+function OrgFiles:_files(skip_resolve)
   local all_files = vim.tbl_map(function(file)
     return vim.tbl_map(function(path)
+      if skip_resolve then
+        return path
+      end
       return vim.fn.resolve(path)
     end, vim.fn.glob(vim.fn.fnamemodify(file, ':p'), false, true))
   end, self.paths)
@@ -347,7 +352,14 @@ function OrgFiles:_files()
 
   return vim.tbl_filter(function(file)
     local ext = vim.fn.fnamemodify(file, ':e')
-    return ext == 'org' or ext == 'org_archive'
+    local is_org = ext == 'org' or ext == 'org_archive'
+
+    if not is_org then
+      return false
+    end
+
+    local stat = vim.loop.fs_stat(file)
+    return stat and stat.type == 'file' or false
   end, all_files)
 end
 
