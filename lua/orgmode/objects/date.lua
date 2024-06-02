@@ -29,6 +29,7 @@ local time_format = '%H:%M'
 ---@field related_date_range OrgDate
 ---@field dayname string
 ---@field adjustments string[]
+---@field private is_today_date boolean?
 local Date = {
   ---@type fun(this: OrgDate, other: OrgDate): boolean
   __eq = function(this, other)
@@ -95,10 +96,16 @@ end
 ---@param time table
 ---@return OrgDate
 function Date:from_time_table(time)
-  local range_diff = self.timestamp_end and self.timestamp_end - self.timestamp or 0
-  local timestamp = os.time(set_date_opts(time, {}, true))
+  local timestamp_end = self.timestamp_end
+  local timestamp = self.timestamp
+  local range_diff = timestamp_end and timestamp_end - timestamp or 0
+  timestamp = os.time(set_date_opts(time, {}, true))
   local opts = set_date_opts(os.date('*t', timestamp))
-  opts.date_only = self.date_only
+  if time.date_only ~= nil then
+    opts.date_only = time.date_only
+  else
+    opts.date_only = self.date_only
+  end
   opts.dayname = self.dayname
   opts.adjustments = self.adjustments
   opts.type = self.type
@@ -599,9 +606,14 @@ end
 function Date:is_today()
   if self.is_today_date == nil then
     local date = now()
-    self.is_today_date = date.year == self.year and date.month == self.month and date.day == self.day
+    self.is_today_date = self:is_same_day(date)
   end
   return self.is_today_date
+end
+
+---@return boolean
+function Date:is_same_day(date)
+  return date and date.year == self.year and date.month == self.month and date.day == self.day
 end
 
 ---@return boolean
