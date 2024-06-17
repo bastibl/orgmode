@@ -765,9 +765,10 @@ function OrgMappings:move_subtree_up()
   local range = item:get_range()
   local target_line = prev_headline:get_range().start_line - 1
   local foldclosed = vim.fn.foldclosed('.')
+  local row = vim.api.nvim_win_get_cursor(0)[1]
+  local offset = row - item:get_range().start_line + prev_headline:get_range().start_line
   vim.cmd(string.format(':%d,%dmove %d', range.start_line, range.end_line, target_line))
-  local pos = vim.fn.getcurpos()
-  vim.fn.cursor(target_line + 1, pos[2])
+  vim.cmd(string.format(':%d', offset))
   if foldclosed > -1 and vim.fn.foldclosed('.') == -1 then
     vim.cmd([[norm!zc]])
   end
@@ -782,9 +783,10 @@ function OrgMappings:move_subtree_down()
   local range = item:get_range()
   local target_line = next_headline:get_range().end_line
   local foldclosed = vim.fn.foldclosed('.')
+  local row = vim.api.nvim_win_get_cursor(0)[1]
+  local offset = item:get_range().start_line + next_headline:get_range().end_line - next_headline:get_range().start_line + row - item:get_range().start_line + 1
   vim.cmd(string.format(':%d,%dmove %d', range.start_line, range.end_line, target_line))
-  local pos = vim.fn.getcurpos()
-  vim.fn.cursor(target_line + range.start_line - range.end_line, pos[2])
+  vim.cmd(string.format(':%d', offset))
   if foldclosed > -1 and vim.fn.foldclosed('.') == -1 then
     vim.cmd([[norm!zc]])
   end
