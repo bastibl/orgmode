@@ -762,13 +762,15 @@ function OrgMappings:move_subtree_up()
   if not prev_headline then
     return utils.echo_warning('Cannot move past superior level.')
   end
-  local row = vim.api.nvim_win_get_cursor(0)[1]
-  local offset = row - item:get_range().start_line + prev_headline:get_range().start_line
-  vim.cmd(
-    string.format(':%d,%dmove %d', item:get_range().start_line, item:get_range().end_line, prev_headline:get_range().start_line - 1)
-  )
-  vim.cmd(string.format(':%d', offset))
-  vim.cmd(':normal zx')
+  local range = item:get_range()
+  local target_line = prev_headline:get_range().start_line - 1
+  local foldclosed = vim.fn.foldclosed('.')
+  vim.cmd(string.format(':%d,%dmove %d', range.start_line, range.end_line, target_line))
+  local pos = vim.fn.getcurpos()
+  vim.fn.cursor(target_line + 1, pos[2])
+  if foldclosed > -1 and vim.fn.foldclosed('.') == -1 then
+    vim.cmd([[norm!zc]])
+  end
 end
 
 function OrgMappings:move_subtree_down()
@@ -777,18 +779,15 @@ function OrgMappings:move_subtree_down()
   if not next_headline then
     return utils.echo_warning('Cannot move past superior level.')
   end
-  local row = vim.api.nvim_win_get_cursor(0)[1]
-  local item_range = item:get_range()
-  local next_range = next_headline:get_range()
-  local offset = item_range.start_line
-    + next_range.end_line
-    - next_range.start_line
-    + row
-    - item_range.start_line
-    + 1
-  vim.cmd(string.format(':%d,%dmove %d', item_range.start_line, item_range.end_line, next_range.end_line))
-  vim.cmd(string.format(':%d', offset))
-  vim.cmd(':normal zx')
+  local range = item:get_range()
+  local target_line = next_headline:get_range().end_line
+  local foldclosed = vim.fn.foldclosed('.')
+  vim.cmd(string.format(':%d,%dmove %d', range.start_line, range.end_line, target_line))
+  local pos = vim.fn.getcurpos()
+  vim.fn.cursor(target_line + range.start_line - range.end_line, pos[2])
+  if foldclosed > -1 and vim.fn.foldclosed('.') == -1 then
+    vim.cmd([[norm!zc]])
+  end
 end
 
 function OrgMappings:show_help(type)
