@@ -25,7 +25,7 @@ local small_minute_step = config.calendar.min_small_step or config.org_time_stam
 local Calendar = {
   win = nil,
   buf = nil,
-  date = Date.today():start_of('month'),
+  date = nil,
   selected = nil,
   select_state = SelState.DAY,
   clearable = false,
@@ -104,6 +104,18 @@ function Calendar:open()
     return self:cursor_left()
   end, map_opts)
   vim.keymap.set('n', 'l', function()
+    return self:cursor_right()
+  end, map_opts)
+  vim.keymap.set('n', '<Down>', function()
+    return self:cursor_down()
+  end, map_opts)
+  vim.keymap.set('n', '<Up>', function()
+    return self:cursor_up()
+  end, map_opts)
+  vim.keymap.set('n', '<Left>', function()
+    return self:cursor_left()
+  end, map_opts)
+  vim.keymap.set('n', '<Right>', function()
     return self:cursor_right()
   end, map_opts)
   vim.keymap.set('n', '>', function()
@@ -549,7 +561,6 @@ end
 function Calendar:dispose()
   self.win = nil
   self.buf = nil
-  self.date = Date.today():start_of('month')
   if self.callback then
     self.callback(nil)
     self.callback = nil

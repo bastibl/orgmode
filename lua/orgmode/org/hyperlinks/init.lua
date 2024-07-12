@@ -24,20 +24,13 @@ function Hyperlinks.find_by_filepath(url)
     return {}
   end
   --TODO integrate with orgmode.utils.fs or orgmode.objects.url
-  local file_base_no_start_path = vim.pesc(file_base:gsub('^%./', '') .. '')
-  local is_relative_path = file_base:match('^%./')
-  local current_file_directory = vim.pesc(fs.get_current_file_dir())
   local valid_filenames = {}
   for _, f in ipairs(filenames) do
-    if is_relative_path then
-      local match = f:match('^' .. current_file_directory .. '/(' .. file_base_no_start_path .. '.*%.org)$')
-      if match then
-        table.insert(valid_filenames, './' .. match)
+    if f:find('^' .. file_base) then
+      if url.realpath then
+        f = f:gsub(file_base, url.path)
       end
-    else
-      if f:find('^' .. file_base) then
-        table.insert(valid_filenames, f)
-      end
+      table.insert(valid_filenames, f)
     end
   end
 
@@ -174,16 +167,32 @@ end
 ---@param headline OrgHeadline
 ---@param path? string
 function Hyperlinks.get_link_to_headline(headline, path)
-  path = path or utils.current_file_path()
   local title = headline:get_title()
-  local id
+
   if config.org_id_link_to_org_use_id then
-    id = headline:id_get_or_create()
+    local id = headline:id_get_or_create()
+    if id then
+      return ('id:%s::*%s'):format(id, title)
+    end
   end
 
-  if config.org_id_link_to_org_use_id and id then
-    return ('id:%s::*%s'):format(id, title)
+  path = path or utils.current_file_path()
+  return ('file:%s::*%s'):format(path, title)
+end
+
+---@param file OrgFile
+---@param path? string
+function Hyperlinks.get_link_to_file(file, path)
+  local title = file:get_title()
+
+  if config.org_id_link_to_org_use_id then
+    local id = file:id_get_or_create()
+    if id then
+      return ('id:%s::*%s'):format(id, title)
+    end
   end
+
+  path = path or file.filename
   return ('file:%s::*%s'):format(path, title)
 end
 

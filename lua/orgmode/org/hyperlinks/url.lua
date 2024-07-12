@@ -1,3 +1,4 @@
+local fs = require('orgmode.utils.fs')
 ---@alias OrgUrlPathType 'file' | 'headline' | 'custom-id' | 'id' | 'external-url' | 'plain' | nil
 ---@alias OrgUrlTargetType 'headline' | 'custom-id' | 'line-number' | 'unknown' | nil
 
@@ -6,6 +7,7 @@
 ---@field protocol string
 ---@field path string
 ---@field path_type OrgUrlPathType
+---@field realpath string
 ---@field target { type: OrgUrlTargetType, value: string | number | nil }
 local Url = {}
 Url.__index = Url
@@ -126,7 +128,7 @@ function Url:get_file()
   if not self:is_file() then
     return nil
   end
-  return self.path
+  return self.realpath or self.path
 end
 
 ---@return string | nil
@@ -256,8 +258,12 @@ function Url:_parse_path_type()
     return
   end
 
-  if first_char == '.' and (self.path:sub(1, 3) == '../' or self.path:sub(1, 2) == './') then
+  if
+    (first_char == '.' and (self.path:sub(1, 3) == '../' or self.path:sub(1, 2) == './'))
+    or (first_char == '~' and self.path:sub(2, 2) == '/')
+  then
     self.path_type = 'file'
+    self.realpath = fs.get_real_path(self.path) or self.path
     return
   end
 

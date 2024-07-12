@@ -103,6 +103,32 @@ function OrgFile:reload_sync(timeout)
   return self:reload():wait(timeout)
 end
 
+---@param action fun(...:OrgFile):any
+function OrgFile:update(action)
+  local is_same_file = self.filename == utils.current_file_path()
+  if is_same_file then
+    return Promise.resolve(action(self)):next(function(result)
+      vim.cmd(':silent! w')
+      return result
+    end)
+  end
+
+  local edit_file = utils.edit_file(self.filename)
+  edit_file.open()
+
+  return Promise.resolve(action(self)):next(function(result)
+    edit_file.close()
+    return self:reload():next(function()
+      return result
+    end)
+  end)
+end
+
+---@param action fun(...:OrgFile):any
+function OrgFile:update_sync(action, timeout)
+  return self:update(action):wait(timeout)
+end
+
 ---Check if file has been modified via 2 methods:
 ---1. If file is loaded in a buffer, check the changedtick
 ---2. If file is not loaded in a buffer, check the mtime
@@ -643,11 +669,25 @@ end
 
 memoize('get_category')
 --- Get the category name for this file
+--- If no category is set, the filename without extension is returned
 --- @return string
 function OrgFile:get_category()
   local category = self:_get_directive('category')
   if category then
     return category
+  end
+
+  return vim.fn.fnamemodify(self.filename, ':t:r') or ''
+end
+
+memoize('get_title')
+--- Get the title for this file
+--- If no title is set, the filename without extension is returned
+--- @return string
+function OrgFile:get_title()
+  local title = self:_get_directive('title')
+  if title then
+    return title
   end
 
   return vim.fn.fnamemodify(self.filename, ':t:r') or ''
@@ -701,6 +741,18 @@ memoize('get_directive')
 ---@return string | nil
 function OrgFile:get_directive(directive_name)
   return self:_get_directive(directive_name)
+end
+
+--- Get headline id or create a new one if it doesn't exist
+--- @return string
+function OrgFile:id_get_or_create()
+  local id = self:get_property('id')
+  if id then
+    return id
+  end
+  local org_id = require('orgmode.org.id').new()
+  self:set_property('ID', org_id)
+  return org_id
 end
 
 ---@private
