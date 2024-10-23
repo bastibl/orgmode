@@ -2,7 +2,7 @@ local Calendar = require('orgmode.objects.calendar')
 local Date = require('orgmode.objects.date')
 local EditSpecial = require('orgmode.objects.edit_special')
 local Help = require('orgmode.objects.help')
-local Hyperlinks = require('orgmode.org.hyperlinks')
+local OrgHyperlink = require('orgmode.org.links.hyperlink')
 local PriorityState = require('orgmode.objects.priority_state')
 local TodoState = require('orgmode.objects.todo_state')
 local config = require('orgmode.config')
@@ -324,7 +324,7 @@ function OrgMappings:set_priority(direction)
   local headline = self.files:get_closest_headline()
   local current_priority = headline:get_priority()
   local prio_range = config:get_priority_range()
-  local priority_state = PriorityState:new(current_priority, prio_range)
+  local priority_state = PriorityState:new(current_priority, prio_range, config.org_priority_start_cycle_with_default)
 
   local new_priority = direction
   if direction == 'up' then
@@ -786,18 +786,20 @@ end
 -- Inserts a new link after the cursor position or modifies the link the cursor is
 -- currently on
 function OrgMappings:insert_link()
-  local link_location = vim.fn.OrgmodeInput('Links: ', '', Hyperlinks.autocomplete_links)
+  local link_location = vim.fn.OrgmodeInput('Links: ', '', function(arg_lead)
+    return self.links:autocomplete(arg_lead)
+  end)
   if vim.trim(link_location) == '' then
     utils.echo_warning('No Link selected')
     return
   end
 
-  Hyperlinks.insert_link(link_location)
+  self.links:insert_link(link_location)
 end
 
 function OrgMappings:store_link()
   local headline = self.files:get_closest_headline()
-  Hyperlinks.store_link_to_headline(headline)
+  self.links:store_link_to_headline(headline)
   return utils.echo_info('Stored: ' .. headline:get_title())
 end
 
@@ -864,7 +866,7 @@ function OrgMappings:add_note()
 end
 
 function OrgMappings:open_at_point()
-  local link = Hyperlinks.get_link_under_cursor()
+  local link = OrgHyperlink.at_cursor()
   if not link then
     local date = self:_get_date_under_cursor()
     if date then

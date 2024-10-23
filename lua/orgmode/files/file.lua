@@ -5,7 +5,7 @@ local Headline = require('orgmode.files.headline')
 local ts = vim.treesitter
 local config = require('orgmode.config')
 local Block = require('orgmode.files.elements.block')
-local Link = require('orgmode.org.hyperlinks.link')
+local Hyperlink = require('orgmode.org.links.hyperlink')
 local Range = require('orgmode.files.elements.range')
 local Memoize = require('orgmode.utils.memoize')
 
@@ -55,12 +55,13 @@ end
 ---Load the file
 ---@return OrgPromise<OrgFile | false>
 function OrgFile.load(filename)
-  if not utils.is_org_file(filename) then
-    return Promise.resolve(false)
-  end
   local bufnr = vim.fn.bufnr(filename) or -1
 
-  if bufnr > -1 and vim.api.nvim_buf_is_loaded(bufnr) then
+  if
+    bufnr > -1
+    and vim.api.nvim_buf_is_loaded(bufnr)
+    and vim.api.nvim_get_option_value('filetype', { buf = bufnr }) == 'org'
+  then
     return Promise.resolve(OrgFile:new({
       filename = filename,
       lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false),
@@ -68,7 +69,7 @@ function OrgFile.load(filename)
     }))
   end
 
-  if not vim.loop.fs_stat(filename) then
+  if not vim.loop.fs_stat(filename) or not utils.is_org_file(filename) then
     return Promise.resolve(false)
   end
 
@@ -172,10 +173,14 @@ function OrgFile:get_ts_matches(query, node)
   local matches = {}
 
   local from, _, to = node:range()
-  for _, match, _ in ts_query:iter_matches(node, self:_get_source(), from, to + 1) do
+  for _, match, _ in ts_query:iter_matches(node, self:_get_source(), from, to + 1, { all = false }) do
     local items = {}
-    for id, matched_node in pairs(match) do
+    for id, matched_nodes in pairs(match) do
       local name = ts_query.captures[id]
+      local matched_node = matched_nodes
+      if type(matched_nodes) == 'table' then
+        matched_node = matched_nodes[#matched_nodes]
+      end
       local node_text = self:get_node_text_list(matched_node)
       items[name] = {
         node = matched_node,
@@ -718,7 +723,7 @@ function OrgFile:get_archive_file_location()
 end
 
 memoize('get_links')
----@return OrgLink[]
+---@return OrgHyperlink[]
 function OrgFile:get_links()
   self:parse(true)
   local ts_query = ts_utils.get_query([[
@@ -732,7 +737,7 @@ function OrgFile:get_links()
   for _, match in ts_query:iter_captures(self.root, self:_get_source()) do
     local line = match:start()
     if not processed_lines[line] then
-      vim.list_extend(links, Link.all_from_line(self.lines[line + 1], line + 1))
+      vim.list_extend(links, Hyperlink.all_from_line(self.lines[line + 1], line + 1))
       processed_lines[line] = true
     end
   end

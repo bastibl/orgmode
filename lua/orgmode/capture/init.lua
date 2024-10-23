@@ -275,6 +275,7 @@ function Capture:refile_file_headline_to_archive(headline)
   end
 
   local destination_file = self.files:get(archive_location)
+  local todo_state = headline:get_todo()
 
   local target_line = self:_refile_from_org_file({
     source_headline = headline,
@@ -287,8 +288,12 @@ function Capture:refile_file_headline_to_archive(headline)
     local archived_headline = archive_file:get_closest_headline({ target_line, 0 })
     archived_headline:set_property('ARCHIVE_TIME', Date.now():to_string())
     archived_headline:set_property('ARCHIVE_FILE', file.filename)
+    local outline_path = headline:get_outline_path()
+    if outline_path ~= '' then
+      archived_headline:set_property('ARCHIVE_OLPATH', outline_path)
+    end
     archived_headline:set_property('ARCHIVE_CATEGORY', headline:get_category())
-    archived_headline:set_property('ARCHIVE_TODO', headline:get_todo() or '')
+    archived_headline:set_property('ARCHIVE_TODO', todo_state or '')
   end)
 end
 
@@ -403,19 +408,17 @@ end
 ---@param arg_lead string
 ---@return string[]
 function Capture:autocomplete_refile(arg_lead)
-  local valid_filenames = self:_get_autocompletion_files(true)
+  local valid_files = self:_get_autocompletion_files(true)
 
-  if not arg_lead then
-    return vim.tbl_keys(valid_filenames)
+  if not arg_lead or #arg_lead == 0 then
+    return vim.tbl_keys(valid_files)
   end
-  local parts = vim.split(arg_lead, '/', { plain = true })
 
-  local selected_file = valid_filenames[parts[1] .. '/']
+  local filename = vim.split(arg_lead, '/', { plain = true })[1]
+  local selected_file = valid_files[filename .. '/']
 
   if not selected_file then
-    return vim.tbl_filter(function(file)
-      return file:match('^' .. vim.pesc(parts[1]))
-    end, vim.tbl_keys(valid_filenames))
+    return vim.fn.matchfuzzy(vim.tbl_keys(valid_files), filename)
   end
 
   local headlines = selected_file:get_opened_unfinished_headlines()
