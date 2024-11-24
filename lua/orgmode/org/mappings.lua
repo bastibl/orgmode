@@ -500,11 +500,11 @@ function OrgMappings:do_promote(whole_subtree)
   vim.cmd([[normal! _]])
 
   local node = ts_utils.get_node_at_cursor()
+  vim.fn.winrestview(win_view)
   if node and node:type() == 'bullet' then
     local listitem = self.files:get_closest_listitem()
     if listitem then
       listitem:promote(whole_subtree)
-      vim.fn.winrestview(win_view)
       return
     end
   end
@@ -517,7 +517,6 @@ function OrgMappings:do_promote(whole_subtree)
     vim.cmd([[norm!zc]])
   end
   EventManager.dispatch(events.HeadlinePromoted:new(self.files:get_closest_headline(), old_level))
-  vim.fn.winrestview(win_view)
 end
 
 function OrgMappings:do_demote(whole_subtree)
@@ -527,6 +526,7 @@ function OrgMappings:do_demote(whole_subtree)
   vim.cmd([[normal! _]])
 
   local node = ts_utils.get_node_at_cursor()
+  vim.fn.winrestview(win_view)
   if node and node:type() == 'bullet' then
     local listitem = self.files:get_closest_listitem()
     if listitem then
@@ -545,7 +545,6 @@ function OrgMappings:do_demote(whole_subtree)
     vim.cmd([[norm!zc]])
   end
   EventManager.dispatch(events.HeadlineDemoted:new(self.files:get_closest_headline(), old_level))
-  vim.fn.winrestview(win_view)
 end
 
 function OrgMappings:org_return()
