@@ -15,7 +15,8 @@ local EventManager = require('orgmode.events')
 local events = EventManager.event
 local Babel = require('orgmode.babel')
 local Job = require('plenary.job')
-local ListItem = require('orgmode.files.elements.listitem')
+local Url = require('orgmode.org.hyperlinks.url')
+local Hyperlinks = require('orgmode.org.hyperlinks')
 
 ---@class OrgMappings
 ---@field capture OrgCapture
@@ -898,15 +899,17 @@ function OrgMappings:open_at_point()
     return self:_goto_headline(headline)
   end
 
-  if link.url:is_file_line_number() then
-    local line_number = link.url:get_line_number() or 0
-    local file_path = link.url:get_file() or utils.current_file_path()
+  local url = Url:new(link.url.url)
+
+  if url:is_file_line_number() then
+    local line_number = url:get_line_number() or 0
+    local file_path = url:get_file() or utils.current_file_path()
     local cmd = string.format('edit +%s %s', line_number, fs.get_real_path(file_path))
     vim.cmd(cmd)
     return vim.cmd([[normal! zv]])
   end
 
-  if link.url:is_external_url() then
+  if url:is_external_url() then
     if vim.ui['open'] then
       return vim.ui.open(link.url:to_string())
     end
@@ -914,8 +917,8 @@ function OrgMappings:open_at_point()
       return utils.echo_warning('Netrw plugin must be loaded in order to open urls.')
     end
     return vim.fn['netrw#BrowseX'](link.url:to_string(), vim.fn['netrw#CheckIfRemote']())
-  elseif link.url:is_citation() then
-    local key = link.url:get_citation()
+  elseif url:is_citation() then
+    local key = url:get_citation()
     local file = string.format("/home/basti/sync/papers/%s.pdf", key)
     return Job:new({
       command = "zathura",
@@ -924,14 +927,14 @@ function OrgMappings:open_at_point()
     }):start()
   end
 
-  if link.url:is_file_only() then
-    local file_path = link.url:get_file()
+  if url:is_file_only() then
+    local file_path = url:get_file()
     local cmd = file_path and string.format('edit %s', fs.get_real_path(file_path)) or ''
     vim.cmd(cmd)
     vim.cmd([[normal! zv]])
   end
 
-  if link.url.protocol and not link.url:is_supported_protocol() then
+  if link.url.protocol and not url:is_supported_protocol() then
     utils.echo_warning(string.format('Unsupported link protocol: %q', link.url.protocol))
     return
   end
