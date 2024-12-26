@@ -939,7 +939,7 @@ function OrgMappings:open_at_point()
     return
   end
 
-  local headlines = Hyperlinks.find_matching_links(link.url)
+  local headlines = Hyperlinks.find_matching_links(url)
   local current_headline = self.files:get_closest_headline_or_nil()
   if current_headline then
     headlines = vim.tbl_filter(function(headline)
