@@ -874,10 +874,11 @@ function OrgMappings:open_at_point()
     end
     return
   end
+  local url = Url:new(link.url.url)
 
   -- handle external links (non-org or without org-specific line target)
 
-  if link.url:is_id() then
+  if url:is_id() then
     local id = link.url:get_id() or ''
     local files = self.files:find_files_with_property('id', id)
     if #files > 0 then
@@ -899,8 +900,6 @@ function OrgMappings:open_at_point()
     return self:_goto_headline(headline)
   end
 
-  local url = Url:new(link.url.url)
-
   if url:is_file_line_number() then
     local line_number = url:get_line_number() or 0
     local file_path = url:get_file() or utils.current_file_path()
@@ -920,6 +919,7 @@ function OrgMappings:open_at_point()
   elseif url:is_citation() then
     local key = url:get_citation()
     local file = string.format("/home/basti/sync/papers/%s.pdf", key)
+    vim.print(file)
     return Job:new({
       command = "zathura",
       args = { file },
