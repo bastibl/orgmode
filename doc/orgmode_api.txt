@@ -218,7 +218,8 @@ OrgApiAgendaOptions                                        *OrgApiAgendaOptions*
     Fields: ~
         {filters?}  (OrgApiAgendaFilter)
         {from?}     (string|OrgDate)
-        {span?}     (number|"day"|"week"|"month"|"year")
+        {span?}     (OrgAgendaSpan)
+        {header?}   (string)
 
 
 OrgAgenda.agenda({options?})                                  *OrgAgenda.agenda*
@@ -227,29 +228,46 @@ OrgAgenda.agenda({options?})                                  *OrgAgenda.agenda*
         {options?}  (OrgApiAgendaOptions)
 
 
-OrgAgendaTodosOptions                                    *OrgAgendaTodosOptions*
+OrgApiAgendaTodosOptions                              *OrgApiAgendaTodosOptions*
 
     Fields: ~
         {filters?}  (OrgApiAgendaFilter)
+        {header?}   (string)
 
 
 OrgAgenda.todos({options?})                                    *OrgAgenda.todos*
 
     Parameters: ~
-        {options?}  (OrgAgendaTodosOptions)
+        {options?}  (OrgApiAgendaTodosOptions)
 
 
-OrgAgendaTagsOptions                                      *OrgAgendaTagsOptions*
+OrgApiAgendaTagsOptions                                *OrgApiAgendaTagsOptions*
 
     Fields: ~
-        {filters?}    (OrgApiAgendaFilter)
-        {todo_only?}  (boolean)
+        {filters?}      (OrgApiAgendaFilter)  Agenda filters for tags and categories
+        {match_query?}  (string)              Match query to find the todos
+        {todo_only?}    (boolean)
+        {header?}       (string)
 
 
 OrgAgenda.tags({options?})                                      *OrgAgenda.tags*
 
     Parameters: ~
-        {options?}  (OrgAgendaTagsOptions)
+        {options?}  (OrgApiAgendaTagsOptions)
+
+
+OrgApiAgendaTagsTodoOptions                        *OrgApiAgendaTagsTodoOptions*
+
+    Fields: ~
+        {filters?}      (OrgApiAgendaFilter)  Agenda filters for tags and categories
+        {match_query?}  (string)              Match query to find the todos
+        {header?}       (string)
+
+
+OrgAgenda.tags_todo({options?})                            *OrgAgenda.tags_todo*
+
+    Parameters: ~
+        {options?}  (OrgApiAgendaTagsOptions)
 
 
 OrgPosition                                                        *OrgPosition*
