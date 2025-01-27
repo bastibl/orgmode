@@ -32,7 +32,7 @@ function utils.readfile(file, opts)
             if opts.raw then
               result = data
             else
-              local lines = vim.split(data, '\n')
+              local lines = vim.split(data, '[\r\n]')
               if lines[#lines] == '' then
                 table.remove(lines, #lines)
               end
@@ -178,7 +178,7 @@ end
 ---@param acc any
 ---@return unknown
 function utils.reduce(tbl, callback, acc)
-  for i, v in pairs(tbl) do
+  for i, v in ipairs(tbl) do
     acc = callback(acc, v, i)
   end
   return acc
@@ -245,17 +245,22 @@ end
 function utils.parse_tags_string(tags)
   local parsed_tags = {}
   for _, tag in ipairs(vim.split(tags or '', ':')) do
-    if tag:find('^[%w_%%@#]+$') then
+    if tag:find('^[\128-\255%w_%%@#]+$') then
       table.insert(parsed_tags, tag)
     end
   end
   return parsed_tags
 end
 
-function utils.tags_to_string(taglist)
+function utils.tags_to_string(taglist, sorted)
   local tags = ''
+  local tags_list = taglist
   if #taglist > 0 then
-    tags = ':' .. table.concat(taglist, ':') .. ':'
+    if sorted then
+      tags_list = vim.deepcopy(taglist)
+      table.sort(tags_list)
+    end
+    tags = ':' .. table.concat(tags_list, ':') .. ':'
   end
   return tags
 end
@@ -599,6 +604,33 @@ end
 function utils.is_org_file(filename)
   local ext = vim.fn.fnamemodify(filename, ':e')
   return ext == 'org' or ext == 'org_archive'
+end
+
+function utils.sorted_pairs(t)
+  local keys = vim.tbl_keys(t)
+  table.sort(keys)
+  local i = 0
+  return function()
+    i = i + 1
+    return keys[i], t[keys[i]]
+  end
+end
+
+---@param headline OrgHeadline
+function utils.goto_headline(headline)
+  local current_file_path = utils.current_file_path()
+  if headline.file.filename ~= current_file_path then
+    vim.cmd(string.format('edit %s', headline.file.filename))
+  else
+    vim.cmd([[normal! m']]) -- add link source to jumplist
+  end
+  vim.fn.cursor({ headline:get_range().start_line, 1 })
+  vim.cmd([[normal! zv]])
+end
+
+---@return string
+function utils.get_visual_selection()
+  return table.concat(vim.fn.getregion(vim.fn.getpos('v'), vim.fn.getpos('.')), '\n')
 end
 
 return utils

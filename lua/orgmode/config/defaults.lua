@@ -1,10 +1,4 @@
----@alias OrgAgendaSpan 'day' | 'week' | 'month' | 'year' | number
----
----@class OrgDefaultConfig
----@field org_id_method 'uuid' | 'ts' | 'org'
----@field org_agenda_span OrgAgendaSpan
----@field org_log_repeat 'time' | 'note' | false
----@field calendar { round_min_with_hours: boolean, min_big_step: number, min_small_step: number? }
+---@class OrgConfigOpts
 local DefaultConfig = {
   org_agenda_files = '',
   org_default_notes_file = '',
@@ -31,6 +25,14 @@ local DefaultConfig = {
   org_agenda_skip_scheduled_if_done = false,
   org_agenda_skip_deadline_if_done = false,
   org_agenda_text_search_extra_files = {},
+  org_agenda_custom_commands = {},
+  org_agenda_block_separator = '-',
+  org_agenda_sorting_strategy = {
+    agenda = { 'time-up', 'priority-down', 'category-keep' },
+    todo = { 'priority-down', 'category-keep' },
+    tags = { 'priority-down', 'category-keep' },
+  },
+  org_agenda_remove_tags = false,
   org_priority_highest = 'A',
   org_priority_default = 'B',
   org_priority_lowest = 'C',
@@ -186,6 +188,7 @@ local DefaultConfig = {
     edit_src = {
       org_edit_src_abort = '<prefix>k',
       org_edit_src_save = '<prefix>w',
+      org_edit_src_save_exit = [[<prefix>']],
       org_edit_src_show_help = 'g?',
     },
     text_objects = {
@@ -201,7 +204,7 @@ local DefaultConfig = {
   },
   emacs_config = {
     executable_path = 'emacs',
-    config_path = '$HOME/.emacs.d/init.el',
+    config_path = nil,
   },
   ui = {
     folds = {
@@ -209,6 +212,9 @@ local DefaultConfig = {
     },
     menu = {
       handler = nil,
+    },
+    input = {
+      use_vim_ui = false,
     },
   },
 }

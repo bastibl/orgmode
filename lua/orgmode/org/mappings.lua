@@ -9,7 +9,6 @@ local config = require('orgmode.config')
 local constants = require('orgmode.utils.constants')
 local ts_utils = require('orgmode.utils.treesitter')
 local utils = require('orgmode.utils')
-local fs = require('orgmode.utils.fs')
 local Table = require('orgmode.files.elements.table')
 local EventManager = require('orgmode.events')
 local events = EventManager.event
@@ -17,6 +16,8 @@ local Babel = require('orgmode.babel')
 local Job = require('plenary.job')
 local Url = require('orgmode.org.hyperlinks.url')
 local Hyperlinks = require('orgmode.org.hyperlinks')
+local Promise = require('orgmode.utils.promise')
+local Input = require('orgmode.ui.input')
 
 ---@class OrgMappings
 ---@field capture OrgCapture
@@ -47,17 +48,29 @@ end
 ---@param tags? string|string[]
 function OrgMappings:set_tags(tags)
   local headline = self.files:get_closest_headline()
-  local current_tags = utils.tags_to_string(headline:get_own_tags())
+  local headline_tags = headline:get_own_tags()
+  local current_tags = utils.tags_to_string(headline_tags)
 
-  if not tags then
-    tags = vim.fn.OrgmodeInput('Tags: ', current_tags, function(arg_lead)
-      return utils.prompt_autocomplete(arg_lead, self.files:get_tags())
+  return Promise.resolve()
+    :next(function()
+      if not tags then
+        return Input.open('Tags: ', current_tags, function(arg_lead)
+          return utils.prompt_autocomplete(arg_lead, self.files:get_tags())
+        end)
+      end
+      if type(tags) == 'table' then
+        tags = string.format(':%s:', table.concat(tags, ':'))
+      end
+
+      return tags
     end)
-  elseif type(tags) == 'table' then
-    tags = string.format(':%s:', table.concat(tags, ':'))
-  end
+    :next(function(new_tags)
+      if not new_tags then
+        return
+      end
 
-  return headline:set_tags(tags)
+      return headline:set_tags(new_tags)
+    end)
 end
 
 function OrgMappings:toggle_archive_tag()
@@ -196,6 +209,7 @@ function OrgMappings:_adjust_date_part(direction, amount, fallback)
     return string.format('%d%s', count or amount, span)
   end
   local minute_adj = get_adj('M', tonumber(config.org_time_stamp_rounding_minutes) * amount)
+  ---@param date OrgDate
   local do_replacement = function(date)
     local col = vim.fn.col('.') or 0
     local char = vim.fn.getline('.'):sub(col, col)
@@ -205,7 +219,7 @@ function OrgMappings:_adjust_date_part(direction, amount, fallback)
       return self:_replace_date(date)
     end
     local col_from_start = col - date.range.start_col
-    local parts = Date.parse_parts(raw_date_value)
+    local parts = Date.from_string(raw_date_value):parse_parts()
     local adj = nil
     local modify_end_time = false
     local part = nil
@@ -279,7 +293,7 @@ function OrgMappings:_adjust_date_part(direction, amount, fallback)
 
     self:_replace_date(new_date)
 
-    if date:is_logbook() and date.related_date_range then
+    if date:is_logbook() and date.related_date then
       local item = self.files:get_closest_headline_or_nil()
       if item then
         local logbook = item:get_logbook()
@@ -351,35 +365,43 @@ function OrgMappings:todo_prev_state()
 end
 
 function OrgMappings:toggle_heading()
-  local line = vim.fn.getline('.')
-  -- TODO: allow nil
+  local line_number = vim.fn.line('.')
+  local line = vim.fn.getline(line_number)
   local parent = self.files:get_closest_headline_or_nil()
+
+  local set_line_and_dispatch_event = function(line_content, action)
+    vim.fn.setline(line_number, line_content)
+    EventManager.dispatch(
+      events.HeadingToggled:new(line_number, action, self.files:get_closest_headline_or_nil({ line_number, 0 }))
+    )
+  end
+  -- Convert to headline
   if not parent then
-    line = '* ' .. line
-    vim.fn.setline('.', line)
-    return
+    return set_line_and_dispatch_event('* ' .. line, 'line_to_headline')
   end
 
+  -- Convert headline to plain text
   if parent:get_range().start_line == vim.api.nvim_win_get_cursor(0)[1] then
     line = line:gsub('^%*+%s', '')
-  else
-    line = line:gsub('^(%s*)', '')
-    if line:match('^[%*-]%s') then -- handle lists
-      line = line:gsub('^[%*-]%s', '') -- strip bullet
-      local todo_keywords = config:get_todo_keywords()
-      line = line:gsub('^%[([X%s])%]%s', function(checkbox_state)
-        if checkbox_state == 'X' then
-          return todo_keywords:first_by_type('DONE').value .. ' '
-        else
-          return todo_keywords:first_by_type('TODO').value .. ' '
-        end
-      end)
-    end
-
-    line = string.rep('*', parent:get_level() + 1) .. ' ' .. line
+    return set_line_and_dispatch_event(line, 'headline_to_line')
   end
 
-  vim.fn.setline('.', line)
+  line = line:gsub('^(%s*)', '')
+  if line:match('^[%*-]%s') then -- handle lists
+    line = line:gsub('^[%*-]%s', '') -- strip bullet
+    local todo_keywords = config:get_todo_keywords()
+    line = line:gsub('^%[([X%s])%]%s', function(checkbox_state)
+      if checkbox_state == 'X' then
+        return todo_keywords:first_by_type('DONE').value .. ' '
+      else
+        return todo_keywords:first_by_type('TODO').value .. ' '
+      end
+    end)
+  end
+
+  line = string.rep('*', parent:get_level() + 1) .. ' ' .. line
+
+  return set_line_and_dispatch_event(line, 'line_to_child_headline')
 end
 
 ---Prompt for a note
@@ -574,28 +596,25 @@ function OrgMappings:org_return()
     end
   end
 
-  local old_mapping = vim.b.org_old_cr_mapping
-
+  local global_cr_keymap = utils.get_keymap({
+    mode = 'i',
+    lhs = '<CR>',
+  })
   -- No other mapping for <CR>, just reproduce it.
-  if not old_mapping or vim.tbl_isempty(old_mapping) then
+  if not global_cr_keymap or vim.tbl_isempty(global_cr_keymap) then
     return vim.api.nvim_feedkeys(utils.esc('<CR>'), 'n', true)
   end
 
-  local rhs = old_mapping.rhs
-  local eval = old_mapping.expr > 0
+  local rhs = global_cr_keymap.rhs
 
-  if old_mapping.callback then
-    rhs = old_mapping.callback()
-    eval = false
+  if global_cr_keymap.callback then
+    rhs = global_cr_keymap.callback()
   end
 
-  if eval then
+  -- If mapping contains `\r`, it means it's already escaped and evaluated
+  if global_cr_keymap.expr > 0 and not rhs:lower():find('\r') then
+    rhs = vim.api.nvim_replace_termcodes(rhs, true, true, true)
     rhs = vim.api.nvim_eval(rhs)
-  end
-
-  -- If the rhs is empty, assume that callback already handled the action
-  if old_mapping.callback and not rhs then
-    return
   end
 
   return vim.api.nvim_feedkeys(rhs, 'n', true)
@@ -786,15 +805,21 @@ end
 -- Inserts a new link after the cursor position or modifies the link the cursor is
 -- currently on
 function OrgMappings:insert_link()
-  local link_location = vim.fn.OrgmodeInput('Links: ', '', function(arg_lead)
+  local link = OrgHyperlink.at_cursor()
+  return Input.open('Links: ', link and link.url:to_string() or '', function(arg_lead)
     return self.links:autocomplete(arg_lead)
-  end)
-  if vim.trim(link_location) == '' then
-    utils.echo_warning('No Link selected')
-    return
-  end
+  end):next(function(link_location)
+    if not link_location then
+      return false
+    end
 
-  self.links:insert_link(link_location)
+    if vim.trim(link_location) == '' then
+      utils.echo_warning('No Link selected')
+      return false
+    end
+
+    return self.links:insert_link(link_location, link and link.desc)
+  end)
 end
 
 function OrgMappings:store_link()
@@ -979,13 +1004,13 @@ end
 ---Find and move cursor to next visible heading.
 ---@return integer
 function OrgMappings:next_visible_heading()
-  return vim.fn.search([[^\*\+]], 'W', 0, 0, self._skip_invisible_heading)
+  return vim.fn.search([[^\*\+\s\+]], 'W', 0, 0, self._skip_invisible_heading)
 end
 
 ---Find and move cursor to previous visible heading.
 ---@return integer
 function OrgMappings:previous_visible_heading()
-  return vim.fn.search([[^\*\+]], 'bW', 0, 0, self._skip_invisible_heading)
+  return vim.fn.search([[^\*\+\s\+]], 'bW', 0, 0, self._skip_invisible_heading)
 end
 
 ---Check if heading is visible. If not, skip it.

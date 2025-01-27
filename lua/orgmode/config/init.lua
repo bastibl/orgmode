@@ -7,7 +7,7 @@ local mappings = require('orgmode.config.mappings')
 local TodoKeywords = require('orgmode.objects.todo_keywords')
 local PriorityState = require('orgmode.objects.priority_state')
 
----@class OrgConfig:OrgDefaultConfig
+---@class OrgConfig:OrgConfigOpts
 ---@field opts table
 ---@field todo_keywords OrgTodoKeywords
 local Config = {}
@@ -33,7 +33,9 @@ function Config:install_grammar()
   local ok, result, err = pcall(vim.treesitter.language.add, 'org')
   if not ok or (not result and err ~= nil) then
     require('orgmode.utils.treesitter.install').run()
+    return true
   end
+  return false
 end
 
 ---@param url? string
@@ -211,16 +213,6 @@ end
 ---@param buffer number? Buffer id
 ---@see orgmode.config.mappings
 function Config:setup_mappings(category, buffer)
-  if category == 'org' and vim.bo.filetype == 'org' and not vim.b[buffer].org_old_cr_mapping then
-    local old_mapping = utils.get_keymap({
-      mode = 'i',
-      lhs = '<CR>',
-      buffer = buffer,
-    })
-    if old_mapping and old_mapping.rhs ~= '<Cmd>lua require("orgmode").action("org_mappings.org_return")<CR>' then
-      vim.b[buffer].org_old_cr_mapping = old_mapping
-    end
-  end
   local maps = self:get_mappings(category, buffer)
   if not maps then
     return

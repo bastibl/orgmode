@@ -1,4 +1,5 @@
 _G.orgmode = _G.orgmode or {}
+_G.Org = _G.Org or {}
 ---@type Org | nil
 local instance = nil
 
@@ -35,6 +36,7 @@ setmetatable(Org, {
 })
 
 function Org:new()
+  require('orgmode.org.global')(self)
   self.initialized = false
   self:setup_autocmds()
   require('orgmode.config'):setup_ts_predicates()
@@ -56,6 +58,7 @@ function Org:init()
   self.links = require('orgmode.org.links'):new({ files = self.files })
   self.agenda = require('orgmode.agenda'):new({
     files = self.files,
+    highlighter = self.highlighter,
   })
   self.capture = require('orgmode.capture'):new({
     files = self.files,
@@ -115,7 +118,7 @@ function Org.setup_ts_grammar()
   )
 end
 
----@param opts? OrgDefaultConfig
+---@param opts? OrgConfigOpts
 ---@return Org
 function Org.setup(opts)
   opts = opts or {}

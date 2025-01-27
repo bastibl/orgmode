@@ -319,10 +319,13 @@ return {
       args = { true },
       opts = { desc = 'org timestamp (inactive)', help_desc = 'Insert/Update inactive date under cursor' },
     }),
-    org_insert_link = m.action(
-      'org_mappings.insert_link',
-      { opts = { desc = 'org insert link', help_desc = 'Insert a hyperlink' } }
-    ),
+    org_insert_link = m.action('org_mappings.insert_link', {
+      modes = { 'n', 'x' },
+      opts = {
+        desc = 'org insert link',
+        help_desc = 'Insert or Update a hyperlink under cursor. Visual selection used as description',
+      },
+    }),
     org_store_link = m.action(
       'org_mappings.store_link',
       { opts = { desc = 'org store link', help_desc = 'Store link to current headline' } }
@@ -372,6 +375,15 @@ return {
     org_edit_src_save = m.custom(
       [[<Cmd>lua require('orgmode.objects.edit_special'):new():write()<CR>]],
       { opts = { desc = 'org save', help_desc = 'Apply changes from the special buffer to the source Org buffer' } }
+    ),
+    org_edit_src_save_exit = m.custom(
+      [[<Cmd>lua require('orgmode.objects.edit_special'):new():write_end_exit()<CR>]],
+      {
+        opts = {
+          desc = 'org save and exit',
+          help_desc = 'Apply changes from the special buffer to the source Org buffer and exit',
+        },
+      }
     ),
   },
   text_objects = {

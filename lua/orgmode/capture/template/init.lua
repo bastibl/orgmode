@@ -4,6 +4,7 @@ local utils = require('orgmode.utils')
 local validator = require('orgmode.utils.validator')
 local Calendar = require('orgmode.objects.calendar')
 local Promise = require('orgmode.utils.promise')
+local Input = require('orgmode.ui.input')
 
 local expansions = {
   ['%%f'] = function()
@@ -23,51 +24,51 @@ local expansions = {
   end,
   ['%%%^t'] = function()
     return Calendar.new({ date = Date.today() }):open():next(function(date)
-      return date and string.format('<%s>', date:to_string()) or nil
+      return date and date:to_wrapped_string(true) or nil
     end)
   end,
   ['%%%^%{([^%}]*)%}t'] = function(title)
     return Calendar.new({ date = Date.today(), title = title }):open():next(function(date)
-      return date and string.format('<%s>', date:to_string()) or nil
+      return date and date:to_wrapped_string(true) or nil
     end)
   end,
   ['%%T'] = function()
-    return string.format('<%s>', Date.now():to_string())
+    return Date.now():to_wrapped_string(true)
   end,
   ['%%%^T'] = function()
     return Calendar.new({ date = Date.now() }):open():next(function(date)
-      return date and string.format('<%s>', date:to_string()) or nil
+      return date and date:to_wrapped_string(true) or nil
     end)
   end,
   ['%%%^%{([^%}]*)%}T'] = function(title)
     return Calendar.new({ date = Date.now(), title = title }):open():next(function(date)
-      return date and string.format('<%s>', date:to_string()) or nil
+      return date and date:to_wrapped_string(true) or nil
     end)
   end,
   ['%%u'] = function()
-    return string.format('[%s]', Date.today():to_string())
+    return Date.today():to_wrapped_string(false)
   end,
   ['%%%^u'] = function()
     return Calendar.new({ date = Date.today() }):open():next(function(date)
-      return date and string.format('[%s]', date:to_string()) or nil
+      return date and date:to_wrapped_string(false) or nil
     end)
   end,
   ['%%%^%{([^%}]*)%}u'] = function(title)
     return Calendar.new({ date = Date.today(), title = title }):open():next(function(date)
-      return date and string.format('[%s]', date:to_string()) or nil
+      return date and date:to_wrapped_string(false) or nil
     end)
   end,
   ['%%U'] = function()
-    return string.format('[%s]', Date.now():to_string())
+    return Date.now():to_wrapped_string(false)
   end,
   ['%%%^U'] = function()
     return Calendar.new({ date = Date.now() }):open():next(function(date)
-      return date and string.format('[%s]', date:to_string()) or nil
+      return date and date:to_wrapped_string(false) or nil
     end)
   end,
   ['%%%^%{([^%}]*)%}U'] = function(title)
     return Calendar.new({ date = Date.now(), title = title }):open():next(function(date)
-      return date and string.format('[%s]', date:to_string()) or nil
+      return date and date:to_wrapped_string(false) or nil
     end)
   end,
   ['%%a'] = function()
@@ -353,34 +354,48 @@ function Template:_compile_dates(content)
 end
 
 ---@param content string
----@return string
+---@return OrgPromise<string>
 function Template:_compile_prompts(content)
+  local prepared_inputs = {}
   for exp in content:gmatch('%%%^%b{}') do
     local details = exp:match('%{(.*)%}')
     local parts = vim.split(details, '|')
     local title, default = parts[1], parts[2]
-    local response
+    local input = {
+      fallback_value = default,
+      exp = exp,
+    }
     if #parts > 2 then
-      local completion_items = vim.list_slice(parts, 3, #parts)
-      local prompt = string.format('%s [%s]: ', title, default)
-      response = vim.fn.OrgmodeInput(prompt, '', function(arg_lead)
-        return vim.tbl_filter(function(v)
-          return v:match('^' .. vim.pesc(arg_lead))
-        end, completion_items)
-      end)
+      input.prompt = string.format('%s [%s]: ', title, default)
+      input.completion = function()
+        local completion_items = vim.list_slice(parts, 3, #parts)
+        return function(arg_lead)
+          return vim.tbl_filter(function(v)
+            return v:match('^' .. vim.pesc(arg_lead))
+          end, completion_items)
+        end
+      end
     else
-      local prompt = default and string.format('%s [%s]:', title, default) or title .. ': '
-      response = vim.trim(vim.fn.input({
-        prompt = prompt,
-        cancelreturn = default or '',
-      }))
+      input.prompt = default and string.format('%s [%s]:', title, default) or title .. ': '
     end
-    if #response == 0 and default then
-      response = default
-    end
-    content = content:gsub(vim.pesc(exp), response)
+    table.insert(prepared_inputs, input)
   end
-  return content
+
+  if #prepared_inputs == 0 then
+    return Promise.resolve(content)
+  end
+
+  return Promise.mapSeries(function(prepared_input)
+    return Input.open(prepared_input.prompt, '', prepared_input.completion and prepared_input.completion() or nil)
+      :next(function(response)
+        if not response or #response == 0 then
+          response = prepared_input.fallback_value
+        end
+        content = content:gsub(vim.pesc(prepared_input.exp), response)
+      end)
+  end, prepared_inputs):next(function()
+    return content
+  end)
 end
 
 function Template:_compile_expressions(content)

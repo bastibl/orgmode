@@ -17,72 +17,107 @@ local function get_date(date, name)
     return Date.from_string(date)
   end
 
-  error(('Invalid format for "%s" date in Org Agenda'):format(name))
+  error(('Invalid format for "%s" date in Org Agenda'):format(name), 0)
 end
 
-local function get_opts(options)
+local function get_shared_opts(options)
   options = options or {}
   local opts = {}
   if options.filters and options.filters ~= '' then
     opts.filter = options.filters
   end
   opts.header = options.header
+  opts.agenda_files = options.org_agenda_files
+  opts.sorting_strategy = options.org_agenda_sorting_strategy
+  opts.tag_filter = options.org_agenda_tag_filter_preset
+  opts.category_filter = options.org_agenda_category_filter_preset
+  opts.remove_tags = options.org_agenda_remove_tags
   return opts
 end
 
----@class OrgApiAgendaOptions
+local function get_tags_opts(options)
+  local opts = get_shared_opts(options)
+  opts.match_query = options.match_query
+  opts.todo_ignore_scheduled = options.org_agenda_todo_ignore_scheduled
+  opts.todo_ignore_deadlines = options.org_agenda_todo_ignore_deadlines
+  return opts
+end
+
+---@class OrgApiAgendaOpts
 ---@field filters? OrgApiAgendaFilter
+---@field header? string
+---@field org_agenda_files? string[]
+---@field org_agenda_tag_filter_preset? string
+---@field org_agenda_category_filter_preset? string
+---@field org_agenda_sorting_strategy? OrgAgendaSortingStrategy[]
+---@field org_agenda_remove_tags? boolean
+
+---@class OrgApiAgendaOptions:OrgApiAgendaOpts
 ---@field from? string | OrgDate
 ---@field span? OrgAgendaSpan
----@field header? string
 
 ---@param options? OrgApiAgendaOptions
 function OrgAgenda.agenda(options)
   options = options or {}
-  local opts = get_opts(options)
+  local opts = get_shared_opts(options)
   opts.from = get_date(options.from, 'from')
   opts.span = options.span
-  opts.header = options.header
   orgmode.agenda:agenda(opts)
 end
 
----@class OrgApiAgendaTodosOptions
----@field filters? OrgApiAgendaFilter
----@field header? string
+---@class OrgApiAgendaTodosOptions:OrgApiAgendaOpts
 
 ---@param options? OrgApiAgendaTodosOptions
 function OrgAgenda.todos(options)
   options = options or {}
-  local opts = get_opts(options)
+  local opts = get_shared_opts(options)
   orgmode.agenda:todos(opts)
 end
 
----@class OrgApiAgendaTagsOptions
----@field filters? OrgApiAgendaFilter Agenda filters for tags and categories
+---@class OrgApiAgendaTagsTodoOptions:OrgApiAgendaOpts
 ---@field match_query? string Match query to find the todos
----@field todo_only? boolean
----@field header? string
-
----@param options? OrgApiAgendaTagsOptions
-function OrgAgenda.tags(options)
-  options = options or {}
-  local opts = get_opts(options)
-  opts.todo_only = options.todo_only
-  opts.match_query = options.match_query
-  orgmode.agenda:tags(opts)
-end
-
----@class OrgApiAgendaTagsTodoOptions
----@field filters? OrgApiAgendaFilter Agenda filters for tags and categories
----@field match_query? string Match query to find the todos
----@field header? string
+---@field org_agenda_todo_ignore_scheduled? OrgAgendaTodoIgnoreScheduledTypes
+---@field org_agenda_todo_ignore_deadlines? OrgAgendaTodoIgnoreDeadlinesTypes
 
 ---@param options? OrgApiAgendaTagsOptions
 function OrgAgenda.tags_todo(options)
   options = options or {}
-  local opts = get_opts(options)
-  opts.match_query = options.match_query
+  local opts = get_tags_opts(options)
   orgmode.agenda:tags_todo(opts)
+end
+
+---@class OrgApiAgendaTagsOptions:OrgApiAgendaTagsTodoOptions
+---@field todo_only? boolean
+
+---@param options? OrgApiAgendaTagsOptions
+function OrgAgenda.tags(options)
+  options = options or {}
+  local opts = get_tags_opts(options)
+  opts.todo_only = options.todo_only
+  orgmode.agenda:tags(opts)
+end
+
+---@param key string Key in the agenda prompt (for example: "a", "t", "m", "M")
+function OrgAgenda.open_by_key(key)
+  return orgmode.agenda:open_by_key(key)
+end
+
+---Get the headline at the cursor position in the agenda view
+---@return OrgApiHeadline | nil
+function OrgAgenda.get_headline_at_cursor()
+  local line_nr = vim.fn.line('.')
+  local agenda_views = orgmode.agenda.views
+
+  for _, view in ipairs(agenda_views) do
+    local agenda_line = view:get_line(line_nr)
+    if agenda_line then
+      local headline = agenda_line.headline
+      if headline then
+        local file = require('orgmode.api').load(headline.file.filename)
+        return file:get_headline_on_line(headline:get_range().start_line)
+      end
+    end
+  end
 end
 
 return OrgAgenda
