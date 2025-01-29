@@ -12,11 +12,13 @@
 ---@field node TSNode
 ---@field range OrgMarkupRange
 ---@field self_contained? boolean
+---@field metadata? table<string, any>
 
 ---@class OrgMarkupHighlight
 ---@field from OrgMarkupRange
 ---@field to OrgMarkupRange
 ---@field char string
+---@field metadata? table<string, any>
 
 ---@class OrgMarkupPreparedHighlight
 ---@field start_line number
@@ -30,7 +32,7 @@
 ---@field url? string
 
 ---@class OrgMarkupHighlighter
----@field parse_node fun(self: OrgMarkupHighlighter, node: TSNode): OrgMarkupNode | false
+---@field parse_node fun(self: OrgMarkupHighlighter, node: TSNode, capture_name: string): OrgMarkupNode | false
 ---@field is_valid_start_node fun(self: OrgMarkupHighlighter, entry: OrgMarkupNode, bufnr: number): boolean
 ---@field is_valid_end_node fun(self: OrgMarkupHighlighter, entry: OrgMarkupNode, bufnr: number): boolean
 ---@field highlight fun(self: OrgMarkupHighlighter, highlights: OrgMarkupHighlight[], bufnr: number)

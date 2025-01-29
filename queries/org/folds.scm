@@ -4,5 +4,4 @@
   (drawer)
   (property_drawer)
   (block)
-  ] @fold
-  (#mytrim! @fold))
+  ] @fold (#org-set-fold-offset! @fold))

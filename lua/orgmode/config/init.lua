@@ -361,53 +361,6 @@ function Config:get_priorities()
 end
 
 function Config:setup_ts_predicates()
-  -- Trim blank lines from end of the region
-  -- Arguments are the captures to trim.
-  ---@param match (TSNode|nil)[]
-  ---@param _ string
-  ---@param bufnr integer
-  ---@param pred string[]
-  ---@param metadata table
-  vim.treesitter.query.add_directive('mytrim!', function(match, _, bufnr, pred, metadata)
-    for _, id in ipairs({ select(2, unpack(pred)) }) do
-      local node = match[id]
-      local start_row, start_col, end_row, end_col = node:range()
-
-      -- Don't trim if region ends in middle of a line
-      if end_col ~= 0 then
-        return
-      end
-
-      local end_line = vim.api.nvim_buf_get_lines(bufnr, end_row - 1, end_row, true)[1]
-      if end_line ~= '' then
-        return
-      end
-
-      while true do
-        if start_row >= end_row - 2 then
-          break
-        end
-        -- As we only care when end_col == 0, always inspect one line above end_row.
-        -- local end_line = vim.api.nvim_buf_get_lines(bufnr, end_row - 1, end_row, true)[1]
-        local end_line = vim.api.nvim_buf_get_lines(bufnr, end_row - 2, end_row - 1, true)[1]
-
-        if end_line ~= '' then
-          break
-        end
-
-        end_row = end_row - 1
-      end
-
-      -- If this produces an invalid range, we just skip it.
-      if start_row < end_row or (start_row == end_row and start_col <= end_col) then
-        if not metadata[id] then
-          metadata[id] = {}
-        end
-        metadata[id].range = { start_row, start_col, end_row, end_col }
-      end
-    end
-  end, true)
-
   local todo_keywords = self:get_todo_keywords():keys()
   local valid_priorities = self:get_priorities()
 
@@ -419,6 +372,42 @@ function Config:setup_ts_predicates()
     end
 
     return false
+  end, { force = true, all = false })
+
+  local org_cycle_separator_lines = math.max(self.opts.org_cycle_separator_lines, 0)
+
+  vim.treesitter.query.add_directive('org-set-fold-offset!', function(match, _, bufnr, pred, metadata)
+    if org_cycle_separator_lines == 0 then
+      return
+    end
+    ---@type TSNode | nil
+    local capture_id = pred[2]
+    local section_node = match[capture_id]
+    if not capture_id or not section_node or section_node:type() ~= 'section' then
+      return
+    end
+    if not metadata[capture_id] then
+      metadata[capture_id] = {}
+    end
+    local range = metadata[capture_id].range or { section_node:range() }
+    local start_row = range[1]
+    local end_row = range[3]
+
+    local empty_lines = 0
+    while end_row > start_row do
+      local line = vim.api.nvim_buf_get_lines(bufnr, end_row - 1, end_row, false)[1]
+      if vim.trim(line) ~= '' then
+        break
+      end
+      empty_lines = empty_lines + 1
+      end_row = end_row - 1
+    end
+
+    if empty_lines < org_cycle_separator_lines then
+      return
+    end
+    range[3] = range[3] - 1
+    metadata[capture_id].range = range
   end, { force = true, all = false })
 
   vim.treesitter.query.add_predicate('org-is-valid-priority?', function(match, _, source, predicate)

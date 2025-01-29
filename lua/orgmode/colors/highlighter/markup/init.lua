@@ -24,6 +24,7 @@ function OrgMarkup:_init_highlighters()
     emphasis = require('orgmode.colors.highlighter.markup.emphasis'):new({ markup = self }),
     link = require('orgmode.colors.highlighter.markup.link'):new({ markup = self }),
     date = require('orgmode.colors.highlighter.markup.dates'):new({ markup = self }),
+    footnote = require('orgmode.colors.highlighter.markup.footnotes'):new({ markup = self }),
     latex = require('orgmode.colors.highlighter.markup.latex'):new({ markup = self }),
   }
 end
@@ -74,14 +75,15 @@ function OrgMarkup:get_node_highlights(root_node, source, line)
     link = {},
     latex = {},
     date = {},
+    footnote = {},
   }
   ---@type OrgMarkupNode[]
   local entries = {}
 
-  for _, node in self.query:iter_captures(root_node, source, line, line + 1) do
+  for capture_id, node in self.query:iter_captures(root_node, source, line, line + 1) do
     local entry = nil
     for _, parser in pairs(self.parsers) do
-      entry = parser:parse_node(node)
+      entry = parser:parse_node(node, self.query.captures[capture_id])
       if entry then
         table.insert(entries, entry)
         break
@@ -132,6 +134,7 @@ function OrgMarkup:get_node_highlights(root_node, source, line)
         char = item.char,
         from = item.self_contained and item.range or from.range,
         to = item.range,
+        metadata = item.metadata,
       })
 
       if last_seek and last_seek.type == item.type then
@@ -171,9 +174,9 @@ function OrgMarkup:get_prepared_headline_highlights(headline)
   for type, highlight in pairs(highlights) do
     vim.list_extend(
       result,
-      self.parsers[type]:prepare_highlights(highlight, function(markup_highlight)
+      self.parsers[type]:prepare_highlights(highlight, function(start_col, end_col)
         local text = headline.file:get_node_text(headline:node())
-        return text:sub(markup_highlight.from.start_col + 1, markup_highlight.to.end_col)
+        return text:sub(start_col, end_col)
       end)
     )
   end
@@ -239,6 +242,10 @@ function OrgMarkup:has_valid_parent(item)
 
   if parent:type() == 'contents' and p then
     return p:type() == 'drawer' or p:type() == 'cell'
+  end
+
+  if parent:type() == 'description' and p and p:type() == 'fndef' then
+    return true
   end
 
   if self.parsers[item.type].has_valid_parent then

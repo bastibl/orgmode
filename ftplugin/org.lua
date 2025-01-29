@@ -23,8 +23,8 @@ require('orgmode.org.indent').setup_virtual_indent()
 vim.bo.modeline = false
 vim.opt_local.fillchars:append('fold: ')
 vim.opt_local.foldmethod = 'expr'
-vim.opt_local.foldexpr = 'v:lua.require("orgmode.org.fold").foldexpr()'
-if utils.has_version_10() and config.ui.folds.colored then
+vim.opt_local.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+if config.ui.folds.colored then
   vim.opt_local.foldtext = ''
 else
   vim.opt_local.foldtext = 'v:lua.require("orgmode.org.indent").foldtext()'

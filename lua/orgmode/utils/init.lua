@@ -93,15 +93,18 @@ end
 
 function utils.open(target)
   if vim.fn.executable('xdg-open') == 1 then
-    return vim.fn.system(string.format('xdg-open %s', target))
+    vim.system({ 'xdg-open', target }, { text = false })
+    return 0
   end
 
   if vim.fn.executable('open') == 1 then
-    return vim.fn.system(string.format('open %s', target))
+    vim.system({ 'open', target }, { text = false })
+    return 0
   end
 
   if vim.fn.has('win32') == 1 then
-    return vim.fn.system(string.format('start "%s"', target))
+    vim.system({ 'start', target }, { text = false })
+    return 0
   end
 end
 
@@ -552,11 +555,6 @@ function utils.edit_file(filename)
       vim.api.nvim_set_current_win(cur_win)
     end,
   }
-end
-
-function utils.has_version_10()
-  local v = vim.version()
-  return not vim.version.lt({ v.major, v.minor, v.patch }, { 0, 10, 0 })
 end
 
 ---@generic EntryType : any

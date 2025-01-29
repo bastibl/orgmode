@@ -9,6 +9,7 @@ local config = require('orgmode.config')
 local constants = require('orgmode.utils.constants')
 local ts_utils = require('orgmode.utils.treesitter')
 local utils = require('orgmode.utils')
+local fs = require('orgmode.utils.fs')
 local Table = require('orgmode.files.elements.table')
 local EventManager = require('orgmode.events')
 local events = EventManager.event
@@ -18,6 +19,7 @@ local Url = require('orgmode.org.hyperlinks.url')
 local Hyperlinks = require('orgmode.org.hyperlinks')
 local Promise = require('orgmode.utils.promise')
 local Input = require('orgmode.ui.input')
+local Footnote = require('orgmode.objects.footnote')
 
 ---@class OrgMappings
 ---@field capture OrgCapture
@@ -892,13 +894,7 @@ end
 
 function OrgMappings:open_at_point()
   local link = OrgHyperlink.at_cursor()
-  if not link then
-    local date = self:_get_date_under_cursor()
-    if date then
-      return self.agenda:open_day(date)
-    end
-    return
-  end
+
   local url = Url:new(link.url.url)
 
   -- handle external links (non-org or without org-specific line target)
@@ -994,7 +990,56 @@ function OrgMappings:open_at_point()
     headline = headlines[choice]
   end
 
+  local date = self:_get_date_under_cursor()
+  if date then
+    return self.agenda:open_day(date)
+  end
+
+  local footnote = Footnote.at_cursor()
+  if footnote then
+    return self:_jump_to_footnote(footnote)
+  end
+
   return self:_goto_headline(headline)
+end
+
+---@param footnote_reference OrgFootnote
+function OrgMappings:_jump_to_footnote(footnote_reference)
+  local file = self.files:get_current_file()
+  local footnote = file:find_footnote(footnote_reference)
+
+  if not footnote then
+    local choice = vim.fn.confirm('No footnote found. Create one?', '&Yes\n&No')
+    if choice ~= 1 then
+      return
+    end
+
+    local footnotes_headline = file:find_headline_by_title('footnotes')
+    if footnotes_headline then
+      local append_line = footnotes_headline:get_append_line()
+      vim.api.nvim_buf_set_lines(0, append_line, append_line, false, { footnote_reference.value .. ' ' })
+      vim.fn.cursor({ append_line + 1, #footnote_reference.value + 1 })
+      return vim.cmd('startinsert!')
+    end
+    local last_line = vim.api.nvim_buf_line_count(0)
+    vim.api.nvim_buf_set_lines(0, last_line, last_line, false, { '', '* Footnotes', footnote_reference.value .. ' ' })
+    vim.fn.cursor({ last_line + 3, #footnote_reference.value + 1 })
+    return vim.cmd('startinsert!')
+  end
+
+  local is_footnote_marker = footnote.range:is_same(footnote_reference.range)
+
+  if not is_footnote_marker then
+    return vim.fn.cursor({ footnote.range.start_line, footnote.range.start_col })
+  end
+
+  local reference = file:find_footnote_reference(footnote)
+
+  if reference then
+    return vim.fn.cursor({ reference.range.start_line, reference.range.start_col })
+  end
+
+  utils.echo_info(('Cannot find reference for footnote "%s"'):format(footnote_reference:get_name()))
 end
 
 function OrgMappings:export()
