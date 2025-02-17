@@ -61,7 +61,7 @@ function OrgMappings:set_tags(tags)
         end)
       end
       if type(tags) == 'table' then
-        tags = string.format(':%s:', table.concat(tags, ':'))
+        tags = utils.tags_to_string(tags)
       end
 
       return tags
@@ -75,19 +75,10 @@ function OrgMappings:set_tags(tags)
     end)
 end
 
+---@return nil
 function OrgMappings:toggle_archive_tag()
   local headline = self.files:get_closest_headline()
-  local current_tags = headline:get_own_tags()
-
-  if vim.tbl_contains(current_tags, 'ARCHIVE') then
-    current_tags = vim.tbl_filter(function(tag)
-      return tag ~= 'ARCHIVE'
-    end, current_tags)
-  else
-    table.insert(current_tags, 'ARCHIVE')
-  end
-
-  return headline:set_tags(utils.tags_to_string(current_tags))
+  headline:toggle_tag('ARCHIVE')
 end
 
 function OrgMappings:cycle()
