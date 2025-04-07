@@ -14,6 +14,9 @@ local expansions = {
     return vim.fn.expand('%:p')
   end,
   ['%%n'] = function()
+    if vim.fn.has('win32') == 1 then
+      return os.getenv('USERNAME')
+    end
     return os.getenv('USER')
   end,
   ['%%x'] = function()
@@ -96,17 +99,15 @@ local Template = {}
 function Template:new(opts)
   opts = opts or {}
 
-  validator.validate({
-    description = { opts.description, 'string', true },
-    template = { opts.template, { 'string', 'table' }, true },
-    target = { opts.target, 'string', true },
-    regexp = { opts.regexp, 'string', true },
-    headline = { opts.headline, 'string', true },
-    properties = { opts.properties, 'table', true },
-    subtemplates = { opts.subtemplates, 'table', true },
-    datetree = { opts.datetree, { 'boolean', 'table' }, true },
-    whole_file = { opts.whole_file, 'boolean', true },
-  })
+  validator.validate('description', opts.description, 'string', true)
+  validator.validate('template', opts.template, { 'string', 'table' }, true)
+  validator.validate('target', opts.target, 'string', true)
+  validator.validate('regexp', opts.regexp, 'string', true)
+  validator.validate('headline', opts.headline, 'string', true)
+  validator.validate('properties', opts.properties, 'table', true)
+  validator.validate('subtemplates', opts.subtemplates, 'table', true)
+  validator.validate('datetree', opts.datetree, { 'boolean', 'table' }, true)
+  validator.validate('whole_file', opts.whole_file, 'boolean', true)
 
   local this = {}
   this.description = opts.description or ''

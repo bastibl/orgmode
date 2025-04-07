@@ -75,6 +75,29 @@ local build = function(orgmode)
 
     agenda = generate_agenda_object(orgmode, config),
     capture = generate_capture_object(orgmode, config),
+
+    store_link = function()
+      ---@type OrgHeadline | nil
+      local headline = nil
+      if vim.bo.filetype == 'orgagenda' then
+        headline = orgmode.agenda:get_headline_at_cursor()
+      elseif vim.bo.filetype == 'org' then
+        headline = orgmode.files:get_current_file():get_closest_headline_or_nil()
+      end
+      if not headline then
+        require('orgmode.utils').echo_error('No headline found')
+        return
+      end
+      headline.file
+        :update(function()
+          orgmode.links:store_link_to_headline(headline)
+        end)
+        :wait()
+      return require('orgmode.utils').echo_info('Stored: ' .. headline:get_title())
+    end,
+    indent_mode = function()
+      require('orgmode.ui.virtual_indent').toggle_buffer_indent_mode()
+    end,
   }
 
   _G.Org = OrgGlobal
@@ -99,12 +122,12 @@ end
 
 vim.api.nvim_create_user_command('Org', function(opts)
   local item = resolve_item(opts.fargs)
-  if item and (type(item) == 'function' or getmetatable(item).__call) then
+  if item and (type(item) == 'function' or (getmetatable(item) and getmetatable(item).__call)) then
     return item()
   end
   require('orgmode.utils').echo_error(('Invalid command "Org %s"'):format(opts.args))
 end, {
-  nargs = '*',
+  nargs = '+',
   complete = function(arg_lead, cmd_line)
     local opts = vim.split(cmd_line:sub(5), '%s+')
     local item = resolve_item(opts)
